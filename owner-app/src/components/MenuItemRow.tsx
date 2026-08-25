@@ -12,10 +12,15 @@ export function MenuItemRow({ item, onEdit, onToggleActive, onDelete }: MenuItem
   return (
     <div className={`menu-row ${item.active ? "" : "is-inactive"}`}>
       <button type="button" className="menu-row__info" onClick={() => onEdit(item)}>
-        <span className="menu-row__name">{item.name}</span>
-        <span className="menu-row__meta">
-          {formatCurrency(item.price)}
-          {item.category ? ` · ${item.category}` : ""}
+        <span className="menu-row__icon" aria-hidden="true">
+          {item.icon || item.name.charAt(0).toUpperCase()}
+        </span>
+        <span className="menu-row__text">
+          <span className="menu-row__name">{item.name}</span>
+          <span className="menu-row__meta">
+            {formatCurrency(item.price)}
+            {item.category ? ` · ${item.category}` : ""}
+          </span>
         </span>
       </button>
 

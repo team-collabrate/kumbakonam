@@ -7,6 +7,8 @@ export interface MenuItem {
   /** In INR, e.g. 40 */
   price: number;
   category?: string;
+  /** Single emoji shown on the item card, e.g. "☕". No image upload — keeps the stack free of Storage. */
+  icon?: string;
   active: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;

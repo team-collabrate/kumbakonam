@@ -32,6 +32,10 @@
   font-size: 15px;
 }
 
+.menu-item-card__icon.is-emoji {
+  font-size: 20px;
+}
+
 .menu-item-card__name {
   font-size: 15px;
   font-weight: 600;

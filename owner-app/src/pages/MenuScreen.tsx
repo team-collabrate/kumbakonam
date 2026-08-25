@@ -32,7 +32,7 @@ export function MenuScreen() {
     setError(null);
     try {
       if (formTarget === "new") {
-        await createMenuItem({ name: values.name, price: values.price, category: values.category });
+        await createMenuItem({ name: values.name, price: values.price, category: values.category, icon: values.icon });
       } else if (formTarget) {
         await updateMenuItem(formTarget.itemId, values);
       }

@@ -6,6 +6,7 @@ export interface MenuItemFormValues {
   name: string;
   price: number;
   category: string;
+  icon: string;
   active: boolean;
 }
 
@@ -18,11 +19,14 @@ export interface MenuItemFormProps {
   onClose: () => void;
 }
 
+const ICON_SUGGESTIONS = ["☕", "🍵", "🥛", "🍛", "🍚", "🥞", "🍩", "🥪", "🍳", "🥟", "🍮", "🍬", "🌯", "🍋", "🍽️"];
+
 /** Design Brief §7 — "Menu edit form (name, price, category toggle, active switch)". */
 export function MenuItemForm({ item, existingCategories, saving, error, onSave, onClose }: MenuItemFormProps) {
   const [name, setName] = useState(item?.name ?? "");
   const [price, setPrice] = useState(item?.price?.toString() ?? "");
   const [category, setCategory] = useState(item?.category ?? "");
+  const [icon, setIcon] = useState(item?.icon ?? "");
   const [active, setActive] = useState(item?.active ?? true);
 
   const isValid = name.trim().length > 0 && Number(price) > 0;
@@ -30,7 +34,7 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
-    onSave({ name: name.trim(), price: Number(price), category: category.trim(), active });
+    onSave({ name: name.trim(), price: Number(price), category: category.trim(), icon: icon.trim(), active });
   };
 
   return (
@@ -71,6 +75,31 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
             ))}
           </datalist>
         </label>
+
+        <label className="menu-form__field">
+          <span>Icon (optional)</span>
+          <input
+            type="text"
+            value={icon}
+            onChange={(e) => setIcon(e.target.value)}
+            placeholder="☕"
+            maxLength={4}
+          />
+        </label>
+
+        <div className="menu-form__icon-suggestions">
+          {ICON_SUGGESTIONS.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              className={`menu-form__icon-chip ${icon === emoji ? "is-selected" : ""}`}
+              onClick={() => setIcon(emoji)}
+              aria-label={`Use ${emoji} icon`}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
 
         <label className="menu-form__toggle-field">
           <span>Active</span>
