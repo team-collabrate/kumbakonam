@@ -7,7 +7,7 @@ export interface AppUser {
   userId: string;
   name: string;
   role: UserRole;
-  /** SHA-256 hash of the 4-6 digit PIN. Never store or transmit the raw PIN. */
+  /** SHA-256 hash of the 4-digit PIN. Never store or transmit the raw PIN. */
   pinHash: string;
   createdAt: Timestamp;
   active: boolean;

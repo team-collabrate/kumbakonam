@@ -46,7 +46,7 @@ Both apps are separate PWA builds (separate installable icons/entry points) from
 - Owner app does not need offline write support (view-only + menu edits), but read-cache is still enabled for fast reopen.
 
 ### 5. Auth Design (PIN-based)
-- Firebase Auth Anonymous sign-in per device, paired with a custom `users` collection storing a hashed 4-6 digit PIN + role.
+- Firebase Auth Anonymous sign-in per device, paired with a custom `users` collection storing a hashed 4-digit PIN + role.
 - On app load: prompt PIN → look up matching user doc by PIN hash → set local session (role: `worker` | `owner`) → store session in memory (re-prompt PIN if app is closed/reopened, or after inactivity timeout, e.g. 30 min).
 - PINs are never stored in plaintext; hashed client-side (e.g. SHA-256) before comparison against stored hash.
 - Firestore Security Rules restrict:

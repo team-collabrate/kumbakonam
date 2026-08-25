@@ -42,7 +42,7 @@
 ### 7. Components Needed
 - Item card (menu grid)
 - Cart line item (qty stepper, note, remove)
-- PIN pad (numeric keypad, 4-6 digits, masked dots)
+- PIN pad (numeric keypad, 4 digits, masked dots)
 - Summary stat card
 - Chart component (bar/line, daily totals)
 - Order history row (expandable to show items)

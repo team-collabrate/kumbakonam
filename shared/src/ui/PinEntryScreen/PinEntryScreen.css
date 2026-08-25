@@ -91,27 +91,3 @@
   font-size: 20px;
   color: var(--color-text-muted);
 }
-
-.pin-screen__enter {
-  width: 100%;
-  min-height: var(--tap-target-min);
-  margin-top: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  font-size: 16px;
-  font-weight: 700;
-  border-radius: var(--radius-md);
-  border: none;
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  cursor: pointer;
-  transition: transform 120ms var(--ease-out);
-}
-
-.pin-screen__enter:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-.pin-screen__enter:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}

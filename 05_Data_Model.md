@@ -17,7 +17,7 @@ Stores login PINs (hashed) and roles.
 | `userId` (doc id) | string | Auto-generated |
 | `name` | string | e.g. "Ravi (Worker)", "Owner 1" |
 | `role` | string enum | `worker` \| `owner` |
-| `pinHash` | string | SHA-256 hash of 4-6 digit PIN |
+| `pinHash` | string | SHA-256 hash of 4-digit PIN |
 | `createdAt` | timestamp | |
 | `active` | boolean | Allows disabling a user without deleting |
 

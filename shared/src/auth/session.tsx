@@ -72,7 +72,7 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
   const login = useCallback(
     async (pin: string) => {
       if (!isValidPinFormat(pin)) {
-        setError("PIN must be 4-6 digits.");
+        setError("PIN must be 4 digits.");
         return;
       }
       setLoading(true);

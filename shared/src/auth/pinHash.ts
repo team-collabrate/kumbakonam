@@ -11,5 +11,5 @@ export async function hashPin(pin: string): Promise<string> {
 }
 
 export function isValidPinFormat(pin: string): boolean {
-  return /^\d{4,6}$/.test(pin);
+  return /^\d{4}$/.test(pin);
 }
