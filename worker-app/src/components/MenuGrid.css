@@ -40,6 +40,10 @@
   padding: var(--space-5) 0;
 }
 
+.menu-grid__status--error {
+  color: var(--color-warning);
+}
+
 .menu-grid__items {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

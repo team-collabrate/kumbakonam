@@ -12,6 +12,7 @@ import {
   updateDoc,
   where,
   type DocumentReference,
+  type FirestoreError,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getFirestoreDb } from "../firebase";
@@ -60,11 +61,17 @@ export async function markOrderSynced(orderId: string): Promise<void> {
 export function watchOrderSyncStatus(
   orderId: string,
   onSyncStateChange: (isPending: boolean) => void,
+  onError?: (error: FirestoreError) => void,
 ): Unsubscribe {
   const db = getFirestoreDb();
-  return onSnapshot(doc(db, COLLECTION, orderId), { includeMetadataChanges: true }, (snap) => {
-    onSyncStateChange(snap.metadata.hasPendingWrites);
-  });
+  return onSnapshot(
+    doc(db, COLLECTION, orderId),
+    { includeMetadataChanges: true },
+    (snap) => {
+      onSyncStateChange(snap.metadata.hasPendingWrites);
+    },
+    onError,
+  );
 }
 
 export async function getOrdersInRange(start: Date, end: Date): Promise<Order[]> {
@@ -84,6 +91,7 @@ export function subscribeToOrdersInRange(
   start: Date,
   end: Date,
   onChange: (orders: Order[]) => void,
+  onError?: (error: FirestoreError) => void,
 ): Unsubscribe {
   const db = getFirestoreDb();
   const q = query(
@@ -92,9 +100,13 @@ export function subscribeToOrdersInRange(
     where("createdAt", "<", Timestamp.fromDate(end)),
     orderBy("createdAt", "desc"),
   );
-  return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => ({ orderId: d.id, ...(d.data() as Omit<Order, "orderId">) })));
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      onChange(snap.docs.map((d) => ({ orderId: d.id, ...(d.data() as Omit<Order, "orderId">) })));
+    },
+    onError,
+  );
 }
 
 /** Owner-only correction path (e.g. fixing a mis-entered discount) — see Data Model §7. */

@@ -8,10 +8,11 @@ const ALL_TAB = "All";
 export interface MenuGridProps {
   items: MenuItem[];
   loading: boolean;
+  error: string | null;
   onAddItem: (item: MenuItem) => void;
 }
 
-export function MenuGrid({ items, loading, onAddItem }: MenuGridProps) {
+export function MenuGrid({ items, loading, error, onAddItem }: MenuGridProps) {
   const [activeCategory, setActiveCategory] = useState(ALL_TAB);
 
   const categories = useMemo(() => {
@@ -46,8 +47,12 @@ export function MenuGrid({ items, loading, onAddItem }: MenuGridProps) {
         </div>
       )}
 
-      {loading ? (
+      {error ? (
+        <p className="menu-grid__status menu-grid__status--error">{error}</p>
+      ) : loading ? (
         <p className="menu-grid__status">Loading menu…</p>
+      ) : items.length === 0 ? (
+        <p className="menu-grid__status">No menu items yet — ask the owner to add some in the dashboard.</p>
       ) : visibleItems.length === 0 ? (
         <p className="menu-grid__status">No items in this category.</p>
       ) : (

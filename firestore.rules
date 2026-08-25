@@ -7,28 +7,54 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    /**
+     * True if `userId` refers to a real, active `users` doc with one of the
+     * given roles. This is the strongest check achievable WITHOUT custom
+     * auth claims: it doesn't prove the caller IS that user (see the
+     * limitation note below), but it does prove the write is at least tied
+     * to a real, currently-active staff account rather than a fabricated
+     * id — closing the "any signed-in session can claim to be anyone"
+     * gap for writes that carry an actor-identifying field.
+     */
+    function isActiveUserWithRole(userId, roles) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.active == true
+        && get(/databases/$(database)/documents/users/$(userId)).data.role in roles;
+    }
+
     // ---------------------------------------------------------------------
-    // KNOWN v1 LIMITATION (see 05_Data_Model.md §7 — "to be finalized in
-    // engineering phase" — and 06_Engineering_Plan.md §6, "PIN security is
-    // basic by design"):
+    // v1 LIMITATION (Phase 5 "finalize" pass — see 05_Data_Model.md §7 and
+    // 06_Engineering_Plan.md §6, "PIN security is basic by design...
+    // acceptable for v1, not meant for high-security multi-location use"):
     //
     // Auth is anonymous Firebase Auth per device; the actual identity
     // (worker vs owner) lives only in the `users` collection, matched
-    // client-side by PIN hash. Firestore rules can only inspect
-    // `request.auth` (uid, no custom claims are minted anywhere in this
-    // stack) — there is no server-verified link between an anonymous uid
-    // and a `users/{userId}` doc, so rules below CANNOT yet distinguish a
-    // worker session from an owner session, only "some signed-in device
-    // that has passed a PIN screen client-side".
+    // client-side by PIN hash. No custom auth claims are minted anywhere
+    // in this stack (that would need a Cloud Function + Blaze billing —
+    // flagged to the product owner, not added unprompted), so rules can
+    // never fully PROVE which role the calling session belongs to.
     //
-    // This is a real skeleton, not a shortcut: role-locked writes
-    // (`menu` write → owner only; `orders` update/delete → owner only,
-    // per Data Model §7) are left as `isSignedIn()` here and must be
-    // hardened in Phase 5 ("Finalize Firestore Security Rules — lock down
-    // by role"), most likely by minting a custom auth claim for the role
-    // at PIN-login time (would need a small Cloud Function) or an
-    // equivalent server-verified check. Flagged for a product/eng call
-    // before Phase 5, not silently decided.
+    // What CAN be done without new infra: for writes that carry a
+    // client-supplied actor id (`orders.workerId`, which already exists in
+    // the schema — Data Model §4), rules can at least verify that id
+    // belongs to a real, active worker/owner via `isActiveUserWithRole()`
+    // above. This is what `orders create` does below. A determined
+    // attacker with API access could still discover a valid id (the
+    // `users` collection is readable to any signed-in session, by
+    // necessity — see below) and use it, but this eliminates fully
+    // fabricated writes and ties every order to an identifiable, currently
+    // -active account.
+    //
+    // What's still NOT enforceable without a schema or infra change:
+    // `menu` writes and `orders` update/delete have no actor-identifying
+    // field in the current Data Model to check against (menu docs don't
+    // record who edited them; order corrections don't record who's
+    // correcting them), so they remain `isSignedIn()`-gated only. Adding an
+    // `updatedBy` field to `menu` (and a similar field for order
+    // corrections) would let the same `isActiveUserWithRole()` pattern
+    // apply there too — a scoped, no-new-infra follow-up if you want it,
+    // but it's a small schema change so flagged here rather than made
+    // silently.
     // ---------------------------------------------------------------------
 
     // users — PIN login must read this collection before any role is known
@@ -42,21 +68,23 @@ service cloud.firestore {
     }
 
     // menu — worker needs it for the order grid, owner needs it for
-    // management, so read is any signed-in session. Write is TODO: owner
-    // only once role is server-verifiable (see note above).
+    // management, so read is any signed-in session. Write: see limitation
+    // note above — not yet restrictable to role == owner without a schema
+    // addition.
     match /menu/{itemId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn(); // TODO(Phase 5): restrict to role == owner
+      allow write: if isSignedIn();
     }
 
     // orders — read is any signed-in session (owner dashboard, worker
-    // history). Create is TODO: worker or owner only; update/delete is
-    // TODO: owner only (corrections) — both currently isSignedIn() pending
-    // the same role-verification work as above.
+    // history). Create is hardened: workerId must reference a real, active
+    // worker or owner. Update/delete (owner corrections) remain
+    // isSignedIn()-only — see limitation note above.
     match /orders/{orderId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn(); // TODO(Phase 5): restrict to role in [worker, owner]
-      allow update, delete: if isSignedIn(); // TODO(Phase 5): restrict to role == owner
+      allow create: if isSignedIn()
+        && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner']);
+      allow update, delete: if isSignedIn();
     }
   }
 }

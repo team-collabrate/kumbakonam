@@ -18,7 +18,7 @@ export interface WorkerHomeProps {
 }
 
 export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
-  const { items, loading } = useMenu();
+  const { items, loading, error: menuError } = useMenu();
   const cart = useCart();
   const printer = usePrinter();
   const online = useOnlineStatus();
@@ -57,7 +57,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           </div>
           <SyncStatusBadge status={syncStatus} />
         </div>
-        <MenuGrid items={items} loading={loading} onAddItem={cart.addItem} />
+        <MenuGrid items={items} loading={loading} error={menuError} onAddItem={cart.addItem} />
       </div>
 
       <div className="worker-home__cart">

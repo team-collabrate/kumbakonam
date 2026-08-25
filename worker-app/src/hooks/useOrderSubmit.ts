@@ -63,12 +63,21 @@ export function useOrderSubmit(
       });
 
       setPendingOrderIds((ids) => [...ids, orderId]);
-      const unsubscribe = watchOrderSyncStatus(orderId, (isPending) => {
-        if (!isPending) {
+      const unsubscribe = watchOrderSyncStatus(
+        orderId,
+        (isPending) => {
+          if (!isPending) {
+            setPendingOrderIds((ids) => ids.filter((id) => id !== orderId));
+            unsubscribe();
+          }
+        },
+        (err) => {
+          // Can't confirm sync state for this order anymore — stop tracking
+          // it as pending rather than leaving the badge stuck forever.
+          console.error("Order sync watch failed", err);
           setPendingOrderIds((ids) => ids.filter((id) => id !== orderId));
-          unsubscribe();
-        }
-      });
+        },
+      );
 
       onSaved({
         orderId,

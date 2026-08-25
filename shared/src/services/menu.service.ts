@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  type FirestoreError,
   type Unsubscribe,
 } from "firebase/firestore";
 import { getFirestoreDb } from "../firebase";
@@ -35,14 +36,19 @@ export async function listMenuItems(options: ListMenuOptions = {}): Promise<Menu
 export function subscribeToMenu(
   onChange: (items: MenuItem[]) => void,
   options: ListMenuOptions = {},
+  onError?: (error: FirestoreError) => void,
 ): Unsubscribe {
   const { activeOnly = true } = options;
   const db = getFirestoreDb();
   const constraints = activeOnly ? [where("active", "==", true)] : [];
   const q = query(collection(db, COLLECTION), ...constraints, orderBy("name"));
-  return onSnapshot(q, (snap) => {
-    onChange(snap.docs.map((d) => ({ itemId: d.id, ...(d.data() as Omit<MenuItem, "itemId">) })));
-  });
+  return onSnapshot(
+    q,
+    (snap) => {
+      onChange(snap.docs.map((d) => ({ itemId: d.id, ...(d.data() as Omit<MenuItem, "itemId">) })));
+    },
+    onError,
+  );
 }
 
 export async function getMenuItem(itemId: string): Promise<MenuItem | null> {

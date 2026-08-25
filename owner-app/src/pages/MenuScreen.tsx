@@ -15,7 +15,7 @@ import "./MenuScreen.css";
 type FormTarget = "new" | MenuItem | null;
 
 export function MenuScreen() {
-  const { items, loading } = useMenuItems();
+  const { items, loading, error: loadError } = useMenuItems();
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +64,9 @@ export function MenuScreen() {
         </button>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <p className="menu-screen__error">{loadError}</p>
+      ) : loading ? (
         <p className="menu-screen__status">Loading…</p>
       ) : items.length === 0 ? (
         <p className="menu-screen__status">No menu items yet — add your first one.</p>
