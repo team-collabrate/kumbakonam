@@ -14,9 +14,11 @@
     "build:worker": "npm run build -w worker-app",
     "build:owner": "npm run build -w owner-app",
     "build": "npm run build:worker && npm run build:owner",
-    "typecheck": "npm run typecheck -w shared && npm run typecheck -w worker-app && npm run typecheck -w owner-app"
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w worker-app && npm run typecheck -w owner-app",
+    "seed:users": "node scripts/seed-users.mjs"
   },
   "devDependencies": {
+    "firebase-admin": "^12.7.0",
     "typescript": "^5.6.3"
   }
 }
