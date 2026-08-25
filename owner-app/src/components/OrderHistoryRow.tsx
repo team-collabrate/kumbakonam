@@ -30,7 +30,7 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
         </span>
       </button>
 
-      <div className={`order-row__details-wrapper ${expanded ? "is-expanded" : ""}`}>
+      {expanded && (
         <div className="order-row__details">
           <ul>
             {order.items.map((item, index) => (
@@ -52,7 +52,7 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
             </div>
           )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

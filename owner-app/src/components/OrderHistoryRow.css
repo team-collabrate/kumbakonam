@@ -13,6 +13,8 @@
   cursor: pointer;
   text-align: left;
   transition: transform 120ms var(--ease-out);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .order-row__summary:active {
@@ -55,20 +57,15 @@
   transform: rotate(180deg);
 }
 
-.order-row__details-wrapper {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 220ms var(--ease-in-out);
-}
-
-.order-row__details-wrapper.is-expanded {
-  grid-template-rows: 1fr;
-}
-
 .order-row__details {
-  overflow: hidden;
-  min-height: 0;
   padding: 0 0 var(--space-3) var(--space-2);
+  animation: order-row-details-enter 160ms ease-out;
+}
+
+@keyframes order-row-details-enter {
+  from {
+    opacity: 0;
+  }
 }
 
 .order-row__details ul {
