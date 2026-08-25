@@ -10,6 +10,15 @@
 .dashboard-screen__stats {
   display: flex;
   gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.dashboard-screen__stats--secondary {
+  margin-top: var(--space-3);
+}
+
+.dashboard-screen__stats--secondary .stat-card {
+  background: transparent;
 }
 
 .dashboard-screen__section {

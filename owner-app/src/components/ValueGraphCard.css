@@ -1,0 +1,52 @@
+.value-graph-card {
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.value-graph-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.value-graph-card__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.value-graph-card__toggle {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px;
+}
+
+.value-graph-card__toggle button {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.value-graph-card__toggle button.is-active {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.value-graph-card__status {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  text-align: center;
+  padding: var(--space-6) 0;
+}
