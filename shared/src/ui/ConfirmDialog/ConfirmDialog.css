@@ -1,0 +1,87 @@
+.confirm-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: var(--space-5);
+  z-index: 30;
+  animation: confirm-backdrop-enter 180ms ease-out;
+}
+
+.confirm-dialog {
+  width: 100%;
+  max-width: 340px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* Modals scale from center, not from a trigger — no transform-origin override needed. */
+  animation: confirm-dialog-enter 200ms var(--ease-out);
+}
+
+@keyframes confirm-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes confirm-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.confirm-dialog__title {
+  margin: 0;
+  font-size: 17px;
+}
+
+.confirm-dialog__message {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.confirm-dialog__actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.confirm-dialog__cancel,
+.confirm-dialog__confirm {
+  flex: 1;
+  min-height: var(--tap-target-min);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.confirm-dialog__cancel:active,
+.confirm-dialog__confirm:active {
+  transform: scale(0.97);
+}
+
+.confirm-dialog__cancel {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.confirm-dialog__confirm {
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.confirm-dialog__confirm.is-destructive {
+  background: var(--color-danger);
+  color: var(--color-danger-contrast);
+}

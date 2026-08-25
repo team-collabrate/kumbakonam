@@ -1,0 +1,119 @@
+.menu-form__backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 20;
+  animation: menu-form-backdrop-enter 180ms ease-out;
+}
+
+.menu-form {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 85vh;
+  overflow-y: auto;
+  /* Bottom sheet — slides up like a drawer, not a centered scale-in. */
+  animation: menu-form-enter 280ms var(--ease-drawer);
+}
+
+@keyframes menu-form-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes menu-form-enter {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+.menu-form__title {
+  margin: 0 0 var(--space-2);
+  font-size: 18px;
+}
+
+.menu-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.menu-form__field input {
+  min-height: var(--tap-target-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 15px;
+}
+
+.menu-form__toggle-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.menu-form__toggle-field input {
+  width: 20px;
+  height: 20px;
+}
+
+.menu-form__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 13px;
+}
+
+.menu-form__actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.menu-form__cancel,
+.menu-form__save {
+  flex: 1;
+  min-height: var(--tap-target-min);
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.menu-form__cancel:active:not(:disabled),
+.menu-form__save:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.menu-form__cancel {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+}
+
+.menu-form__cancel:disabled,
+.menu-form__save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.menu-form__save {
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}

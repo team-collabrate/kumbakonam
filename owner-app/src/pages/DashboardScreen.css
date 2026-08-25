@@ -1,0 +1,27 @@
+.dashboard-screen {
+  padding: var(--space-5) var(--space-4);
+}
+
+.dashboard-screen__title {
+  margin: 0 0 var(--space-4);
+  font-size: 22px;
+}
+
+.dashboard-screen__stats {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.dashboard-screen__section {
+  margin-top: var(--space-6);
+}
+
+.dashboard-screen__section-title {
+  margin: 0 0 var(--space-2);
+  font-size: 15px;
+}
+
+.dashboard-screen__loading {
+  color: var(--color-text-muted);
+  font-size: 14px;
+}

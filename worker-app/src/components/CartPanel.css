@@ -1,0 +1,120 @@
+.cart-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+}
+
+.cart-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-4) var(--space-2);
+}
+
+.cart-panel__header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.cart-panel__clear {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.cart-panel__clear:active {
+  transform: scale(0.95);
+}
+
+.cart-panel__lines {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--space-4);
+}
+
+.cart-panel__empty {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  padding: var(--space-4) 0;
+}
+
+.cart-panel__list {
+  margin: 0;
+  padding: 0;
+}
+
+.cart-panel__footer {
+  padding: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cart-panel__totals {
+  margin: 0;
+}
+
+.cart-panel__totals > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0;
+}
+
+.cart-panel__totals dt,
+.cart-panel__totals dd {
+  margin: 0;
+}
+
+.cart-panel__total-row {
+  color: var(--color-text) !important;
+  font-size: 20px !important;
+  font-weight: 700;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.cart-panel__status {
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-align: center;
+  transition: color 150ms ease;
+}
+
+.cart-panel__status.is-error {
+  color: var(--color-warning);
+}
+
+.cart-panel__status.is-success {
+  color: var(--color-success);
+}
+
+.cart-panel__submit {
+  min-height: 56px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.cart-panel__submit:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.cart-panel__submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

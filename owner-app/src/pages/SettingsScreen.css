@@ -1,0 +1,45 @@
+.settings-screen {
+  padding: var(--space-5) var(--space-4);
+}
+
+.settings-screen__title {
+  margin: 0 0 var(--space-4);
+  font-size: 22px;
+}
+
+.settings-screen__card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-4);
+}
+
+.settings-screen__label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.settings-screen__name {
+  margin: var(--space-1) 0 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.settings-screen__logout {
+  width: 100%;
+  min-height: var(--tap-target-min);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out);
+}
+
+.settings-screen__logout:active {
+  transform: scale(0.98);
+}

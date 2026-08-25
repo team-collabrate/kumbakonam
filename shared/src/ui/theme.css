@@ -1,0 +1,82 @@
+/* Design tokens from 04_Design_Brief.md — imported once by each app's main.tsx. */
+
+:root {
+  --color-accent: #e8674f;
+  --color-accent-contrast: #ffffff;
+  --color-success: #6fcf97;
+  --color-warning: #f2c94c;
+  --color-danger: #d64545;
+  --color-danger-contrast: #ffffff;
+
+  --font-family: "Inter", "Roboto", system-ui, -apple-system, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --tap-target-min: 44px;
+
+  /* Custom easing — the built-in CSS keywords are too weak to feel intentional. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+[data-theme="dark"] {
+  --color-bg: #14151a;
+  --color-surface: #1e1f26;
+  --color-surface-raised: #262832;
+  --color-text: #fafafa;
+  --color-text-muted: #9a9ba5;
+  --color-border: #2a2b33;
+}
+
+[data-theme="light"] {
+  --color-bg: #fafaf8;
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-text: #14151a;
+  --color-text-muted: #6b6c75;
+  --color-border: #e7e5e0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background: var(--color-bg);
+  color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

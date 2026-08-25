@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // ---------------------------------------------------------------------
+    // KNOWN v1 LIMITATION (see 05_Data_Model.md §7 — "to be finalized in
+    // engineering phase" — and 06_Engineering_Plan.md §6, "PIN security is
+    // basic by design"):
+    //
+    // Auth is anonymous Firebase Auth per device; the actual identity
+    // (worker vs owner) lives only in the `users` collection, matched
+    // client-side by PIN hash. Firestore rules can only inspect
+    // `request.auth` (uid, no custom claims are minted anywhere in this
+    // stack) — there is no server-verified link between an anonymous uid
+    // and a `users/{userId}` doc, so rules below CANNOT yet distinguish a
+    // worker session from an owner session, only "some signed-in device
+    // that has passed a PIN screen client-side".
+    //
+    // This is a real skeleton, not a shortcut: role-locked writes
+    // (`menu` write → owner only; `orders` update/delete → owner only,
+    // per Data Model §7) are left as `isSignedIn()` here and must be
+    // hardened in Phase 5 ("Finalize Firestore Security Rules — lock down
+    // by role"), most likely by minting a custom auth claim for the role
+    // at PIN-login time (would need a small Cloud Function) or an
+    // equivalent server-verified check. Flagged for a product/eng call
+    // before Phase 5, not silently decided.
+    // ---------------------------------------------------------------------
+
+    // users — PIN login must read this collection before any role is known
+    // (chicken-and-egg), so any signed-in (incl. anonymous) session can
+    // read. No client write path: users are provisioned via the Firebase
+    // console or an admin script (Engineering Plan Phase 6), which uses
+    // the Admin SDK and bypasses these rules entirely.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
+    // menu — worker needs it for the order grid, owner needs it for
+    // management, so read is any signed-in session. Write is TODO: owner
+    // only once role is server-verifiable (see note above).
+    match /menu/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn(); // TODO(Phase 5): restrict to role == owner
+    }
+
+    // orders — read is any signed-in session (owner dashboard, worker
+    // history). Create is TODO: worker or owner only; update/delete is
+    // TODO: owner only (corrections) — both currently isSignedIn() pending
+    // the same role-verification work as above.
+    match /orders/{orderId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn(); // TODO(Phase 5): restrict to role in [worker, owner]
+      allow update, delete: if isSignedIn(); // TODO(Phase 5): restrict to role == owner
+    }
+  }
+}

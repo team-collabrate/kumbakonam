@@ -1,0 +1,31 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# env files (keep example files)
+.env
+.env.*
+!.env.example
+
+# firebase
+.firebase
+firebase-debug.log
+firebase-debug.*.log
+ui-debug.log
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
+
+# Claude Code local tooling (personal settings, installed skill cache)
+.claude/settings.local.json
+.claude/skills/
+.agents/
+skills-lock.json
