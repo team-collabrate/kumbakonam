@@ -2,6 +2,7 @@ import type { Order } from "@kumbakonam/shared";
 
 export interface TopItem {
   name: string;
+  nameTa?: string;
   qty: number;
 }
 
@@ -20,14 +21,15 @@ export function computeDashboardStats(orders: Order[]): DashboardStats {
   const orderCount = orders.length;
   const avgOrderValue = orderCount > 0 ? Math.round(totalSales / orderCount) : 0;
 
-  const qtyByName = new Map<string, number>();
+  const byName = new Map<string, { qty: number; nameTa?: string }>();
   for (const order of orders) {
     for (const item of order.items) {
-      qtyByName.set(item.name, (qtyByName.get(item.name) ?? 0) + item.qty);
+      const existing = byName.get(item.name);
+      byName.set(item.name, { qty: (existing?.qty ?? 0) + item.qty, nameTa: existing?.nameTa ?? item.nameTa });
     }
   }
-  const topItems = Array.from(qtyByName.entries())
-    .map(([name, qty]) => ({ name, qty }))
+  const topItems = Array.from(byName.entries())
+    .map(([name, { qty, nameTa }]) => ({ name, nameTa, qty }))
     .sort((a, b) => b.qty - a.qty)
     .slice(0, TOP_ITEMS_LIMIT);
 

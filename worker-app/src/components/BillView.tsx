@@ -1,4 +1,4 @@
-import { formatCurrency, useLanguage, type Language } from "@kumbakonam/shared";
+import { formatCurrency, translateItemName, useLanguage, type Language } from "@kumbakonam/shared";
 import type { BillInput } from "../printing/escpos";
 import "./BillView.css";
 
@@ -49,7 +49,7 @@ export function BillView({ bill, canRetryPrint, onRetryPrint, onClose }: BillVie
               <li key={index}>
                 <div className="bill-view__item-row">
                   <span>
-                    {item.qty}x {item.name}
+                    {item.qty}x {translateItemName(item, language)}
                   </span>
                   <span>{formatCurrency(item.price * item.qty)}</span>
                 </div>

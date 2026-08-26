@@ -14,7 +14,10 @@ const PAYMENT_LABEL: Record<PaymentMethod, string> = {
 };
 
 export interface BillLine {
+  /** Canonical English/Tanglish name — this is what actually gets printed (see textLine() below). */
   name: string;
+  /** Tamil display name, ignored here — kept only so BillView can show it on-screen. */
+  nameTa?: string;
   qty: number;
   price: number;
   note?: string;

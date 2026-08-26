@@ -4,6 +4,7 @@ import type { MenuItem, PaymentMethod } from "@kumbakonam/shared";
 export interface CartLine {
   itemId: string;
   name: string;
+  nameTa?: string;
   price: number;
   qty: number;
   note: string;
@@ -44,7 +45,7 @@ export function useCart(): UseCartResult {
       if (existing) {
         return prev.map((l) => (l.itemId === item.itemId ? { ...l, qty: l.qty + 1 } : l));
       }
-      return [...prev, { itemId: item.itemId, name: item.name, price: item.price, qty: 1, note: "" }];
+      return [...prev, { itemId: item.itemId, name: item.name, nameTa: item.nameTa, price: item.price, qty: 1, note: "" }];
     });
   }, []);
 

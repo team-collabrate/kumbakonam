@@ -1,4 +1,4 @@
-import { useLanguage } from "@kumbakonam/shared";
+import { translateItemName, useLanguage } from "@kumbakonam/shared";
 import type { TopItem } from "../utils/dashboardStats";
 import "./TopItemsList.css";
 
@@ -22,7 +22,7 @@ export function TopItemsList({ items }: TopItemsListProps) {
       {items.map((item, index) => (
         <li key={item.name} className="top-items__row">
           <span className="top-items__rank">{index + 1}</span>
-          <span className="top-items__name">{item.name}</span>
+          <span className="top-items__name">{translateItemName(item, language)}</span>
           <span className="top-items__qty">
             {item.qty} {STRINGS.sold[language]}
           </span>

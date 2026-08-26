@@ -1,4 +1,4 @@
-import { formatCurrency, useLanguage } from "@kumbakonam/shared";
+import { formatCurrency, translateItemName, useLanguage } from "@kumbakonam/shared";
 import type { CartLine } from "../hooks/useCart";
 import "./CartLineItem.css";
 
@@ -22,11 +22,12 @@ export interface CartLineItemProps {
 
 export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteChange }: CartLineItemProps) {
   const { language } = useLanguage();
+  const displayName = translateItemName(line, language);
   return (
     <li className="cart-line">
       <div className="cart-line__row">
         <div className="cart-line__info">
-          <span className="cart-line__name">{line.name}</span>
+          <span className="cart-line__name">{displayName}</span>
           <span className="cart-line__unit-price">
             {formatCurrency(line.price)} {STRINGS.each[language]}
           </span>
@@ -36,7 +37,7 @@ export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteC
           <button
             type="button"
             onClick={() => onDecrement(line.itemId)}
-            aria-label={`${STRINGS.decrease[language]} ${line.name} ${STRINGS.quantity[language]}`}
+            aria-label={`${STRINGS.decrease[language]} ${displayName} ${STRINGS.quantity[language]}`}
           >
             −
           </button>
@@ -44,7 +45,7 @@ export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteC
           <button
             type="button"
             onClick={() => onIncrement(line.itemId)}
-            aria-label={`${STRINGS.increase[language]} ${line.name} ${STRINGS.quantity[language]}`}
+            aria-label={`${STRINGS.increase[language]} ${displayName} ${STRINGS.quantity[language]}`}
           >
             +
           </button>
@@ -56,7 +57,7 @@ export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteC
           type="button"
           className="cart-line__remove"
           onClick={() => onRemove(line.itemId)}
-          aria-label={`${STRINGS.remove[language]} ${line.name} ${STRINGS.fromCart[language]}`}
+          aria-label={`${STRINGS.remove[language]} ${displayName} ${STRINGS.fromCart[language]}`}
         >
           ×
         </button>

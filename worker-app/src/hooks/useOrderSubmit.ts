@@ -56,6 +56,7 @@ export function useOrderSubmit(
       const items: OrderItem[] = cart.lines.map((l) => ({
         itemId: l.itemId,
         name: l.name,
+        ...(l.nameTa ? { nameTa: l.nameTa } : {}),
         price: l.price,
         qty: l.qty,
         ...(l.note.trim() ? { note: l.note.trim() } : {}),
@@ -90,7 +91,13 @@ export function useOrderSubmit(
       onSaved({
         orderId,
         cafeName: "Kumbakonam Cafe",
-        items: cart.lines.map((l) => ({ name: l.name, qty: l.qty, price: l.price, note: l.note.trim() || undefined })),
+        items: cart.lines.map((l) => ({
+          name: l.name,
+          nameTa: l.nameTa,
+          qty: l.qty,
+          price: l.price,
+          note: l.note.trim() || undefined,
+        })),
         subtotal: cart.subtotal,
         discount: cart.discountAmount,
         total: cart.total,

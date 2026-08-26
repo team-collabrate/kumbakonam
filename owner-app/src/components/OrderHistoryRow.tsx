@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { formatCurrency, useLanguage, type Language, type Order } from "@kumbakonam/shared";
+import { formatCurrency, translateItemName, useLanguage, type Language, type Order } from "@kumbakonam/shared";
 import "./OrderHistoryRow.css";
 
 const PAYMENT_LABEL: Record<Order["paymentMethod"], Record<Language, string>> = {
@@ -50,7 +50,7 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
               <li key={index}>
                 <div className="order-row__item-line">
                   <span>
-                    {item.qty}x {item.name}
+                    {item.qty}x {translateItemName(item, language)}
                   </span>
                   <span>{formatCurrency(item.price * item.qty)}</span>
                 </div>
