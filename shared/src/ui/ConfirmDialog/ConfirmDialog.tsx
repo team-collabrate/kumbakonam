@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLanguage } from "../../i18n";
 import "./ConfirmDialog.css";
 
@@ -28,6 +29,23 @@ export function ConfirmDialog({
   const { language } = useLanguage();
   const resolvedConfirmLabel = confirmLabel ?? DEFAULT_CONFIRM[language];
   const resolvedCancelLabel = cancelLabel ?? DEFAULT_CANCEL[language];
+
+  // Keyboard support: Escape cancels, Enter confirms — matches a physical-keyboard
+  // counter setup. Self-contained so callers don't need to wire anything up.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        onConfirm();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onCancel, onConfirm]);
+
   return (
     <div className="confirm-dialog__backdrop" role="alertdialog" aria-modal="true" aria-label={title}>
       <div className="confirm-dialog">

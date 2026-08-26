@@ -1,9 +1,7 @@
-import { useMemo, useState } from "react";
 import { translateCategory, useLanguage, type MenuItem } from "@kumbakonam/shared";
 import { MenuItemCard } from "./MenuItemCard";
+import { ALL_TAB } from "../hooks/useMenuCategories";
 import "./MenuGrid.css";
-
-const ALL_TAB = "All";
 
 const STRINGS = {
   all: { en: "All", ta: "அனைத்தும்" },
@@ -16,29 +14,31 @@ const STRINGS = {
   emptyCategory: { en: "No items in this category.", ta: "இந்தப் பிரிவில் பொருட்கள் இல்லை." },
 };
 
+/** Keys 1-9 then 0 map to the first 10 visible items — same order the ⌨ badges show. */
+const SHORTCUT_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
 export interface MenuGridProps {
-  items: MenuItem[];
+  categories: string[];
+  activeCategory: string;
+  onCategoryChange: (category: string) => void;
+  visibleItems: MenuItem[];
+  totalItemCount: number;
   loading: boolean;
   error: string | null;
   onAddItem: (item: MenuItem) => void;
 }
 
-export function MenuGrid({ items, loading, error, onAddItem }: MenuGridProps) {
+export function MenuGrid({
+  categories,
+  activeCategory,
+  onCategoryChange,
+  visibleItems,
+  totalItemCount,
+  loading,
+  error,
+  onAddItem,
+}: MenuGridProps) {
   const { language } = useLanguage();
-  const [activeCategory, setActiveCategory] = useState(ALL_TAB);
-
-  const categories = useMemo(() => {
-    const found = new Set<string>();
-    items.forEach((item) => {
-      if (item.category) found.add(item.category);
-    });
-    return [ALL_TAB, ...Array.from(found).sort()];
-  }, [items]);
-
-  const visibleItems = useMemo(
-    () => (activeCategory === ALL_TAB ? items : items.filter((i) => i.category === activeCategory)),
-    [items, activeCategory],
-  );
 
   return (
     <div className="menu-grid">
@@ -51,7 +51,7 @@ export function MenuGrid({ items, loading, error, onAddItem }: MenuGridProps) {
               role="tab"
               aria-selected={activeCategory === category}
               className={`menu-grid__tab ${activeCategory === category ? "is-active" : ""}`}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => onCategoryChange(category)}
             >
               {category === ALL_TAB ? STRINGS.all[language] : translateCategory(category, language)}
             </button>
@@ -63,14 +63,14 @@ export function MenuGrid({ items, loading, error, onAddItem }: MenuGridProps) {
         <p className="menu-grid__status menu-grid__status--error">{error}</p>
       ) : loading ? (
         <p className="menu-grid__status">{STRINGS.loading[language]}</p>
-      ) : items.length === 0 ? (
+      ) : totalItemCount === 0 ? (
         <p className="menu-grid__status">{STRINGS.empty[language]}</p>
       ) : visibleItems.length === 0 ? (
         <p className="menu-grid__status">{STRINGS.emptyCategory[language]}</p>
       ) : (
         <div className="menu-grid__items">
-          {visibleItems.map((item) => (
-            <MenuItemCard key={item.itemId} item={item} onAdd={onAddItem} />
+          {visibleItems.map((item, index) => (
+            <MenuItemCard key={item.itemId} item={item} shortcutKey={SHORTCUT_KEYS[index]} onAdd={onAddItem} />
           ))}
         </div>
       )}

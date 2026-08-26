@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLanguage, type Language } from "@kumbakonam/shared";
 import type { PrinterStatus } from "../hooks/usePrinter";
 import "./PrinterSetupModal.css";
@@ -36,6 +37,20 @@ const STRINGS = {
 /** Engineering Plan Phase 3 — one-time "connect printer" setup screen. */
 export function PrinterSetupModal({ status, error, deviceName, onConnect, onClose }: PrinterSetupModalProps) {
   const { language } = useLanguage();
+
+  // Escape only — Enter is left alone so it can't accidentally trigger the
+  // Web USB device picker (that's a real, deliberate action, not a default).
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="printer-modal__backdrop" role="dialog" aria-modal="true" aria-label={STRINGS.title[language]}>
       <div className="printer-modal">

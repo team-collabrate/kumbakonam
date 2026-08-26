@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AppTheme } from "../theme";
 import { LanguageToggle, useLanguage } from "../../i18n";
 import "./PinEntryScreen.css";
@@ -46,6 +46,22 @@ export function PinEntryScreen({
     if (loading) return;
     setPin((p) => p.slice(0, -1));
   };
+
+  // A counter tablet with a keyboard attached should be able to type the PIN too.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        handleDigit(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        handleBackspace();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pin, loading]);
 
   return (
     <div className="pin-screen" data-theme={theme}>

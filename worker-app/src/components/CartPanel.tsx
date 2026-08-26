@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ConfirmDialog, formatCurrency, useLanguage } from "@kumbakonam/shared";
 import type { UseCartResult } from "../hooks/useCart";
 import type { UseOrderSubmitResult } from "../hooks/useOrderSubmit";
@@ -27,18 +26,21 @@ const STRINGS = {
 export interface CartPanelProps {
   cart: UseCartResult;
   orderSubmit: UseOrderSubmitResult;
+  /** Lifted to WorkerHome so the Backspace/Delete keyboard shortcut can trigger the same confirm dialog. */
+  confirmingClear: boolean;
+  onRequestClear: () => void;
+  onCancelClear: () => void;
 }
 
-export function CartPanel({ cart, orderSubmit }: CartPanelProps) {
+export function CartPanel({ cart, orderSubmit, confirmingClear, onRequestClear, onCancelClear }: CartPanelProps) {
   const { language } = useLanguage();
-  const [confirmingClear, setConfirmingClear] = useState(false);
 
   return (
     <div className="cart-panel">
       <div className="cart-panel__header">
         <h2>{STRINGS.title[language]}</h2>
         {!cart.isEmpty && (
-          <button type="button" className="cart-panel__clear" onClick={() => setConfirmingClear(true)}>
+          <button type="button" className="cart-panel__clear" onClick={onRequestClear}>
             {STRINGS.clearCart[language]}
           </button>
         )}
@@ -52,9 +54,9 @@ export function CartPanel({ cart, orderSubmit }: CartPanelProps) {
           destructive
           onConfirm={() => {
             cart.clearCart();
-            setConfirmingClear(false);
+            onCancelClear();
           }}
-          onCancel={() => setConfirmingClear(false)}
+          onCancel={onCancelClear}
         />
       )}
 

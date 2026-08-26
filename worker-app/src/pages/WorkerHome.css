@@ -39,6 +39,13 @@
   font-weight: 700;
 }
 
+.worker-home__shortcuts-hint {
+  margin: var(--space-2) var(--space-5) 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-family: monospace;
+}
+
 @media (max-width: 900px) {
   .worker-home {
     grid-template-columns: 1fr;
@@ -49,5 +56,10 @@
 
   .worker-home__cart {
     height: 60vh;
+  }
+
+  /* No physical keyboard on a phone/tablet touch layout — the hint is just clutter here. */
+  .worker-home__shortcuts-hint {
+    display: none;
   }
 }

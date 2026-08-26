@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { formatCurrency, translateItemName, useLanguage, type Language } from "@kumbakonam/shared";
 import type { BillInput } from "../printing/escpos";
 import "./BillView.css";
@@ -30,6 +31,19 @@ export interface BillViewProps {
 /** On-screen bill fallback — User Flow §1 ("printer not found → show on-screen bill fallback"), worker can screenshot/share it. */
 export function BillView({ bill, canRetryPrint, onRetryPrint, onClose }: BillViewProps) {
   const { language } = useLanguage();
+
+  // Escape or Enter both move on to the next order — there's nothing to "cancel" here.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "Enter") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
     <div className="bill-view__backdrop" role="dialog" aria-modal="true" aria-label="Bill">
       <div className="bill-view">
