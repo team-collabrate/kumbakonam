@@ -4,6 +4,9 @@ export type Language = "en" | "ta";
 
 const STORAGE_KEY = "kumbakonam-language";
 
+/** This is a Tamil-speaking local cafe — Tamil is the default; English is the opt-out via the toggle. */
+const DEFAULT_LANGUAGE: Language = "ta";
+
 interface LanguageContextValue {
   language: Language;
   setLanguage: (lang: Language) => void;
@@ -13,9 +16,9 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 function readStoredLanguage(): Language {
-  if (typeof window === "undefined") return "en";
+  if (typeof window === "undefined") return DEFAULT_LANGUAGE;
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === "ta" ? "ta" : "en";
+  return stored === "ta" || stored === "en" ? stored : DEFAULT_LANGUAGE;
 }
 
 /** Wraps each app so any component/hook can read/switch English ↔ Tamil; persisted per device. */
