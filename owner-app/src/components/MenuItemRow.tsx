@@ -1,4 +1,4 @@
-import { formatCurrency, translateCategory, translateItemName, useLanguage, type MenuItem } from "@kumbakonam/shared";
+import { formatCurrency, ProductIcon, translateCategory, translateItemName, useLanguage, type MenuItem } from "@kumbakonam/shared";
 import "./MenuItemRow.css";
 
 const STRINGS = {
@@ -19,9 +19,7 @@ export function MenuItemRow({ item, onEdit, onToggleActive, onDelete }: MenuItem
   return (
     <div className={`menu-row ${item.active ? "" : "is-inactive"}`}>
       <button type="button" className="menu-row__info" onClick={() => onEdit(item)}>
-        <span className="menu-row__icon" aria-hidden="true">
-          {item.icon || displayName.charAt(0).toUpperCase()}
-        </span>
+        <ProductIcon name={item.name} icon={item.icon} fallbackLabel={displayName} variant="row" />
         <span className="menu-row__text">
           <span className="menu-row__name">{displayName}</span>
           <span className="menu-row__meta">

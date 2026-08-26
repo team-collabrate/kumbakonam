@@ -1,4 +1,4 @@
-import { formatCurrency, translateItemName, useLanguage, type MenuItem } from "@kumbakonam/shared";
+import { formatCurrency, ProductIcon, translateItemName, useLanguage, type MenuItem } from "@kumbakonam/shared";
 import "./MenuItemCard.css";
 
 export interface MenuItemCardProps {
@@ -18,11 +18,11 @@ export function MenuItemCard({ item, shortcutKey, onAdd }: MenuItemCardProps) {
           {shortcutKey}
         </span>
       )}
-      <span className={`menu-item-card__icon ${item.icon ? "is-emoji" : ""}`} aria-hidden="true">
-        {item.icon || displayName.charAt(0).toUpperCase()}
-      </span>
-      <span className="menu-item-card__name">{displayName}</span>
-      <span className="menu-item-card__price">{formatCurrency(item.price)}</span>
+      <ProductIcon name={item.name} icon={item.icon} fallbackLabel={displayName} variant="card" />
+      <div className="menu-item-card__body">
+        <span className="menu-item-card__name">{displayName}</span>
+        <span className="menu-item-card__price">{formatCurrency(item.price)}</span>
+      </div>
     </button>
   );
 }

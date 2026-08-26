@@ -2,23 +2,28 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  min-height: 96px;
-  padding: var(--space-4);
+  align-items: stretch;
+  padding: 0;
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
   transition: transform 120ms var(--ease-out), background-color 120ms ease;
+}
+
+.menu-item-card:active {
+  background: var(--color-surface-raised);
+  transform: scale(0.97);
 }
 
 .menu-item-card__shortcut {
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,26 +38,11 @@
   font-family: monospace;
 }
 
-.menu-item-card:active {
-  background: var(--color-surface-raised);
-  transform: scale(0.97);
-}
-
-.menu-item-card__icon {
+.menu-item-card__body {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
-  color: var(--color-accent);
-  font-weight: 700;
-  font-size: 15px;
-}
-
-.menu-item-card__icon.is-emoji {
-  font-size: 20px;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .menu-item-card__name {
