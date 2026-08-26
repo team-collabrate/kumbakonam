@@ -1,9 +1,18 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { formatCurrency } from "@kumbakonam/shared";
+import { formatCurrency, useLanguage } from "@kumbakonam/shared";
 import type { ChartBucket } from "../utils/chartBuckets";
 import "./ValueGraphCard.css";
 
 export type GraphMode = "weekly" | "monthly";
+
+const STRINGS = {
+  title: { en: "Sales Trend", ta: "விற்பனை போக்கு" },
+  weekly: { en: "Weekly", ta: "வாரம்" },
+  monthly: { en: "Monthly", ta: "மாதம்" },
+  periodLabel: { en: "Graph period", ta: "வரைபட காலம்" },
+  loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
+  empty: { en: "No sales yet in this period.", ta: "இந்தக் காலத்தில் இதுவரை விற்பனை இல்லை." },
+};
 
 export interface ValueGraphCardProps {
   mode: GraphMode;
@@ -14,11 +23,12 @@ export interface ValueGraphCardProps {
 
 /** The prominent sales-trend chart at the top of the Dashboard. */
 export function ValueGraphCard({ mode, onModeChange, data, loading }: ValueGraphCardProps) {
+  const { language } = useLanguage();
   return (
     <div className="value-graph-card">
       <div className="value-graph-card__header">
-        <h2 className="value-graph-card__title">Sales Trend</h2>
-        <div className="value-graph-card__toggle" role="radiogroup" aria-label="Graph period">
+        <h2 className="value-graph-card__title">{STRINGS.title[language]}</h2>
+        <div className="value-graph-card__toggle" role="radiogroup" aria-label={STRINGS.periodLabel[language]}>
           <button
             type="button"
             role="radio"
@@ -26,7 +36,7 @@ export function ValueGraphCard({ mode, onModeChange, data, loading }: ValueGraph
             className={mode === "weekly" ? "is-active" : ""}
             onClick={() => onModeChange("weekly")}
           >
-            Weekly
+            {STRINGS.weekly[language]}
           </button>
           <button
             type="button"
@@ -35,15 +45,15 @@ export function ValueGraphCard({ mode, onModeChange, data, loading }: ValueGraph
             className={mode === "monthly" ? "is-active" : ""}
             onClick={() => onModeChange("monthly")}
           >
-            Monthly
+            {STRINGS.monthly[language]}
           </button>
         </div>
       </div>
 
       {loading ? (
-        <p className="value-graph-card__status">Loading…</p>
+        <p className="value-graph-card__status">{STRINGS.loading[language]}</p>
       ) : data.length === 0 ? (
-        <p className="value-graph-card__status">No sales yet in this period.</p>
+        <p className="value-graph-card__status">{STRINGS.empty[language]}</p>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>

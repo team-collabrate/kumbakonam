@@ -21,6 +21,18 @@
   color: var(--color-text-muted);
 }
 
+.settings-screen__card--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-screen__card--row .settings-screen__label {
+  font-size: 15px;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
 .settings-screen__name {
   margin: var(--space-1) 0 0;
   font-size: 18px;

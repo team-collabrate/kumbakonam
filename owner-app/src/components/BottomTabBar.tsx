@@ -1,13 +1,16 @@
+import { useLanguage, type Language } from "@kumbakonam/shared";
 import "./BottomTabBar.css";
 
 export type TabKey = "dashboard" | "reports" | "menu" | "settings";
 
-const TABS: Array<{ key: TabKey; label: string; icon: string }> = [
-  { key: "dashboard", label: "Dashboard", icon: "⌂" },
-  { key: "reports", label: "Reports", icon: "▤" },
-  { key: "menu", label: "Menu", icon: "☰" },
-  { key: "settings", label: "Settings", icon: "⚙" },
+const TABS: Array<{ key: TabKey; label: Record<Language, string>; icon: string }> = [
+  { key: "dashboard", label: { en: "Dashboard", ta: "டாஷ்போர்டு" }, icon: "⌂" },
+  { key: "reports", label: { en: "Reports", ta: "அறிக்கைகள்" }, icon: "▤" },
+  { key: "menu", label: { en: "Menu", ta: "மெனு" }, icon: "☰" },
+  { key: "settings", label: { en: "Settings", ta: "அமைப்புகள்" }, icon: "⚙" },
 ];
+
+const NAV_LABEL = { en: "Main navigation", ta: "முதன்மை வழிசெலுத்தல்" };
 
 export interface BottomTabBarProps {
   active: TabKey;
@@ -16,8 +19,9 @@ export interface BottomTabBarProps {
 
 /** Design Brief §6 — bottom tab bar: Dashboard / Reports / Menu / Settings. */
 export function BottomTabBar({ active, onChange }: BottomTabBarProps) {
+  const { language } = useLanguage();
   return (
-    <nav className="bottom-tabs" aria-label="Main navigation">
+    <nav className="bottom-tabs" aria-label={NAV_LABEL[language]}>
       {TABS.map((tab) => (
         <button
           key={tab.key}
@@ -29,7 +33,7 @@ export function BottomTabBar({ active, onChange }: BottomTabBarProps) {
           <span className="bottom-tabs__icon" aria-hidden="true">
             {tab.icon}
           </span>
-          <span className="bottom-tabs__label">{tab.label}</span>
+          <span className="bottom-tabs__label">{tab.label[language]}</span>
         </button>
       ))}
     </nav>

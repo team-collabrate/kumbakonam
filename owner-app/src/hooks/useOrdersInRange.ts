@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { describeFirestoreError, subscribeToOrdersInRange, type Order } from "@kumbakonam/shared";
+import { describeFirestoreError, subscribeToOrdersInRange, useLanguage, type Order } from "@kumbakonam/shared";
 import type { DateRange } from "../utils/dateRange";
 
 export interface UseOrdersInRangeResult {
@@ -10,6 +10,7 @@ export interface UseOrdersInRangeResult {
 
 /** Realtime — TDD §7 ("owner dashboard subscribes to orders via onSnapshot filtered by date range"). */
 export function useOrdersInRange(range: DateRange): UseOrdersInRangeResult {
+  const { language } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,14 +30,14 @@ export function useOrdersInRange(range: DateRange): UseOrdersInRangeResult {
       },
       (err) => {
         console.error("Orders subscription failed", err);
-        setError(describeFirestoreError(err));
+        setError(describeFirestoreError(err, language));
         setLoading(false);
       },
     );
     return unsubscribe;
     // Depend on the primitive timestamps, not `range` itself — a new Date
     // object every render would otherwise resubscribe on every render.
-  }, [startTime, endTime]);
+  }, [startTime, endTime, language]);
 
   return { orders, loading, error };
 }

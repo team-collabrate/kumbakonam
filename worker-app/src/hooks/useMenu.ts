@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { describeFirestoreError, subscribeToMenu, type MenuItem } from "@kumbakonam/shared";
+import { describeFirestoreError, subscribeToMenu, useLanguage, type MenuItem } from "@kumbakonam/shared";
 
 export interface UseMenuResult {
   items: MenuItem[];
@@ -9,6 +9,7 @@ export interface UseMenuResult {
 
 /** Realtime menu — reflects Owner edits instantly with no restart (User Flow §3). */
 export function useMenu(): UseMenuResult {
+  const { language } = useLanguage();
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,12 +24,13 @@ export function useMenu(): UseMenuResult {
       {},
       (err) => {
         console.error("Menu subscription failed", err);
-        setError(describeFirestoreError(err));
+        setError(describeFirestoreError(err, language));
         setLoading(false);
       },
     );
     return unsubscribe;
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language]);
 
   return { items, loading, error };
 }

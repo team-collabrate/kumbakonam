@@ -1,5 +1,5 @@
-// One-time admin script (Engineering Plan Phase 6) — seeds the initial
-// ~30-item menu. Requires a service account key (same as seed-users.mjs).
+// One-time admin script (Engineering Plan Phase 6) — seeds the menu.
+// Requires a service account key (same as seed-users.mjs).
 // Never commit the key file.
 //
 // Re-runnable: clears the existing `menu` collection first, so running
@@ -23,54 +23,43 @@ const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-// Placeholder beta menu — a South Indian tiffin/coffee-house lineup fitting
-// the "Kumbakonam" name (renowned for its filter coffee). Edit freely via
-// the Owner App's Menu Management screen; this is just a starting point.
-// Icons are single emoji — closest available match, not literal (Unicode
-// has no idli/dosa/vada glyphs).
+// Pure local cafe menu — hot drinks, juice, and snacks only (no tiffin/meals).
+// `name` is the canonical English/Tanglish name — used for orders, receipts,
+// and ESC/POS printing (most thermal printers can't render Tamil glyphs).
+// `nameTa` is the Tamil-script name shown on-screen when the app language
+// is switched to Tamil. Icons are single emoji — closest available match.
 const items = [
-  // Beverages
-  { name: "Filter Coffee", price: 40, category: "Beverages", icon: "☕" },
-  { name: "Masala Chai", price: 30, category: "Beverages", icon: "🍵" },
-  { name: "Plain Tea", price: 20, category: "Beverages", icon: "🍵" },
-  { name: "Badam Milk", price: 50, category: "Beverages", icon: "🥛" },
-  { name: "Rose Milk", price: 40, category: "Beverages", icon: "🥛" },
-  { name: "Buttermilk", price: 25, category: "Beverages", icon: "🥛" },
-  { name: "Lemon Juice", price: 35, category: "Beverages", icon: "🍋" },
+  // Hot Drinks
+  { name: "Filter Coffee", nameTa: "பில்டர் காபி", price: 20, category: "Hot Drinks", icon: "☕" },
+  { name: "Masala Chai", nameTa: "மசாலா தேநீர்", price: 15, category: "Hot Drinks", icon: "🍵" },
+  { name: "Plain Tea", nameTa: "தேநீர்", price: 15, category: "Hot Drinks", icon: "🍵" },
+  { name: "Ginger Tea", nameTa: "இஞ்சி தேநீர்", price: 15, category: "Hot Drinks", icon: "🍵" },
+  { name: "Black Coffee", nameTa: "கருப்பு காபி", price: 15, category: "Hot Drinks", icon: "☕" },
+  { name: "Green Tea", nameTa: "பச்சை தேநீர்", price: 20, category: "Hot Drinks", icon: "🍵" },
+  { name: "Badam Milk", nameTa: "பாதாம் பால்", price: 40, category: "Hot Drinks", icon: "🥛" },
+  { name: "Horlicks", nameTa: "ஹார்லிக்ஸ்", price: 30, category: "Hot Drinks", icon: "🥛" },
 
-  // Breakfast / Tiffin
-  { name: "Idli (2 pcs)", price: 50, category: "Breakfast", icon: "🍥" },
-  { name: "Masala Dosa", price: 80, category: "Breakfast", icon: "🌯" },
-  { name: "Plain Dosa", price: 60, category: "Breakfast", icon: "🌯" },
-  { name: "Rava Dosa", price: 90, category: "Breakfast", icon: "🌯" },
-  { name: "Onion Uttapam", price: 80, category: "Breakfast", icon: "🥞" },
-  { name: "Vada (2 pcs)", price: 40, category: "Breakfast", icon: "🍩" },
-  { name: "Pongal", price: 60, category: "Breakfast", icon: "🍚" },
-  { name: "Upma", price: 50, category: "Breakfast", icon: "🍚" },
-  { name: "Idiyappam", price: 60, category: "Breakfast", icon: "🍜" },
-  { name: "Appam (2 pcs)", price: 70, category: "Breakfast", icon: "🥞" },
-
-  // Meals
-  { name: "Sambar Rice", price: 70, category: "Meals", icon: "🍛" },
-  { name: "Curd Rice", price: 60, category: "Meals", icon: "🍚" },
-  { name: "Lemon Rice", price: 60, category: "Meals", icon: "🍋" },
-  { name: "Tomato Rice", price: 65, category: "Meals", icon: "🍅" },
-  { name: "Bisi Bele Bath", price: 80, category: "Meals", icon: "🍛" },
-  { name: "Full Meals (Thali)", price: 120, category: "Meals", icon: "🍽️" },
+  // Juice
+  { name: "Lemon Juice", nameTa: "எலுமிச்சை ஜூஸ்", price: 20, category: "Juice", icon: "🍋" },
+  { name: "Rose Milk", nameTa: "ரோஜா பால்", price: 30, category: "Juice", icon: "🥛" },
+  { name: "Buttermilk", nameTa: "மோர்", price: 15, category: "Juice", icon: "🥛" },
+  { name: "Sweet Lassi", nameTa: "இனிப்பு லஸ்ஸி", price: 30, category: "Juice", icon: "🥤" },
+  { name: "Orange Juice", nameTa: "ஆரஞ்சு ஜூஸ்", price: 30, category: "Juice", icon: "🍊" },
+  { name: "Grape Juice", nameTa: "திராட்சை ஜூஸ்", price: 30, category: "Juice", icon: "🍇" },
+  { name: "Watermelon Juice", nameTa: "தர்பூசணி ஜூஸ்", price: 25, category: "Juice", icon: "🍉" },
+  { name: "Mango Juice", nameTa: "மாம்பழ ஜூஸ்", price: 35, category: "Juice", icon: "🥭" },
+  { name: "Sugarcane Juice", nameTa: "கரும்பு சாறு", price: 25, category: "Juice", icon: "🧃" },
 
   // Snacks
-  { name: "Veg Sandwich", price: 60, category: "Snacks", icon: "🥪" },
-  { name: "Bread Omelette", price: 50, category: "Snacks", icon: "🍳" },
-  { name: "Samosa (2 pcs)", price: 30, category: "Snacks", icon: "🥟" },
-  { name: "Bonda (2 pcs)", price: 30, category: "Snacks", icon: "🍡" },
-  { name: "Mysore Bonda (2 pcs)", price: 35, category: "Snacks", icon: "🍡" },
-  { name: "Vegetable Cutlet (2 pcs)", price: 45, category: "Snacks", icon: "🥔" },
-  { name: "Masala Vada (2 pcs)", price: 35, category: "Snacks", icon: "🍩" },
-
-  // Desserts
-  { name: "Kesari", price: 40, category: "Desserts", icon: "🍮" },
-  { name: "Payasam", price: 50, category: "Desserts", icon: "🍮" },
-  { name: "Rava Laddu (2 pcs)", price: 30, category: "Desserts", icon: "🍬" },
+  { name: "Veg Sandwich", nameTa: "வெஜ் சாண்ட்விச்", price: 60, category: "Snacks", icon: "🥪" },
+  { name: "Bread Omelette", nameTa: "பிரட் ஆம்லெட்", price: 50, category: "Snacks", icon: "🍳" },
+  { name: "Samosa (2 pcs)", nameTa: "சமோசா (2)", price: 30, category: "Snacks", icon: "🥟" },
+  { name: "Bonda (2 pcs)", nameTa: "போண்டா (2)", price: 30, category: "Snacks", icon: "🍡" },
+  { name: "Mysore Bonda (2 pcs)", nameTa: "மைசூர் போண்டா (2)", price: 35, category: "Snacks", icon: "🍡" },
+  { name: "Vegetable Cutlet (2 pcs)", nameTa: "வெஜிடபிள் கட்லெட் (2)", price: 45, category: "Snacks", icon: "🥔" },
+  { name: "Masala Vada (2 pcs)", nameTa: "மசாலா வடை (2)", price: 35, category: "Snacks", icon: "🍩" },
+  { name: "Murukku", nameTa: "முறுக்கு", price: 20, category: "Snacks", icon: "🌀" },
+  { name: "Banana Chips", nameTa: "வாழைக்காய் சிப்ஸ்", price: 20, category: "Snacks", icon: "🍌" },
 ];
 
 const existing = await db.collection("menu").get();
@@ -89,7 +78,7 @@ for (const item of items) {
     createdAt: now,
     updatedAt: now,
   });
-  console.log(`Created ${item.icon} ${item.name} (${item.category}, ₹${item.price}) -> ${ref.id}`);
+  console.log(`Created ${item.icon} ${item.name} / ${item.nameTa} (${item.category}, ₹${item.price}) -> ${ref.id}`);
 }
 
 console.log(`Done. Seeded ${items.length} items.`);

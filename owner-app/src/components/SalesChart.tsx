@@ -1,15 +1,18 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { formatCurrency } from "@kumbakonam/shared";
+import { formatCurrency, useLanguage } from "@kumbakonam/shared";
 import type { ChartBucket } from "../utils/chartBuckets";
 import "./SalesChart.css";
+
+const EMPTY = { en: "No sales yet in this period.", ta: "இந்தக் காலத்தில் இதுவரை விற்பனை இல்லை." };
 
 export interface SalesChartProps {
   data: ChartBucket[];
 }
 
 export function SalesChart({ data }: SalesChartProps) {
+  const { language } = useLanguage();
   if (data.length === 0) {
-    return <p className="sales-chart__empty">No sales yet in this period.</p>;
+    return <p className="sales-chart__empty">{EMPTY[language]}</p>;
   }
 
   return (

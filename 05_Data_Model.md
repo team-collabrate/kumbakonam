@@ -25,9 +25,10 @@ Stores login PINs (hashed) and roles.
 | Field | Type | Description |
 |---|---|---|
 | `itemId` (doc id) | string | Auto-generated |
-| `name` | string | e.g. "Filter Coffee" |
+| `name` | string | Canonical English/Tanglish name, e.g. "Filter Coffee". Used for orders, receipts, and ESC/POS printing (most thermal printers can't render Tamil glyphs). |
+| `nameTa` | string, optional | Tamil-script display name, e.g. "பில்டர் காபி". Shown on-screen (Worker menu grid, Owner menu list) when the app language is set to Tamil; falls back to `name` if unset. |
 | `price` | number | In ₹, e.g. 40 |
-| `category` | string | Optional grouping label, e.g. "Beverages" |
+| `category` | string | Optional grouping label, e.g. "Hot Drinks". Category *labels* are translated in the UI via a small lookup table, not stored bilingually. |
 | `active` | boolean | Toggle item availability without deleting |
 | `createdAt` | timestamp | |
 | `updatedAt` | timestamp | Last edited by owner |

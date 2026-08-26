@@ -11,7 +11,27 @@ import { signInAnonymously } from "firebase/auth";
 import { getFirebaseAuth } from "../firebase";
 import { findUserByPinHash } from "../services";
 import type { SessionUser, UserRole } from "../types";
+import { useLanguage } from "../i18n";
 import { hashPin, isValidPinFormat } from "./pinHash";
+
+const MESSAGES = {
+  connectFailed: {
+    en: "Can't reach the server. Check your connection and try again.",
+    ta: "சர்வரை அணுக முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+  },
+  pinFormat: {
+    en: "PIN must be 4 digits.",
+    ta: "பின் எண் 4 இலக்கங்களாக இருக்க வேண்டும்.",
+  },
+  incorrectPin: {
+    en: "Incorrect PIN.",
+    ta: "பின் எண் தவறு.",
+  },
+  loginFailed: {
+    en: "Something went wrong. Please try again.",
+    ta: "ஏதோ தவறு நடந்தது. மீண்டும் முயற்சிக்கவும்.",
+  },
+} as const;
 
 /** Per TDD §5 / 03_User_Flow §4 — re-prompt after this much inactivity. */
 export const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
@@ -41,6 +61,9 @@ export interface SessionProviderProps {
 }
 
 export function SessionProvider({ children, expectedRole }: SessionProviderProps) {
+  const { language } = useLanguage();
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const [ready, setReady] = useState(false);
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(false);
@@ -48,7 +71,9 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Anonymous sign-in gates Firestore reads per firestore.rules — must
-  // complete before a PIN lookup query is allowed to run.
+  // complete before a PIN lookup query is allowed to run. Runs once on
+  // mount regardless of later language changes (languageRef avoids
+  // re-triggering sign-in just because the toggle was flipped).
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (auth.currentUser) {
@@ -59,7 +84,7 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
       .then(() => setReady(true))
       .catch((err: unknown) => {
         console.error("Anonymous sign-in failed", err);
-        setError("Can't reach the server. Check your connection and try again.");
+        setError(MESSAGES.connectFailed[languageRef.current]);
       });
   }, []);
 
@@ -72,7 +97,7 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
   const login = useCallback(
     async (pin: string) => {
       if (!isValidPinFormat(pin)) {
-        setError("PIN must be 4 digits.");
+        setError(MESSAGES.pinFormat[language]);
         return;
       }
       setLoading(true);
@@ -81,18 +106,18 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
         const pinHash = await hashPin(pin);
         const user = await findUserByPinHash(pinHash, expectedRole);
         if (!user) {
-          setError("Incorrect PIN.");
+          setError(MESSAGES.incorrectPin[language]);
           return;
         }
         setSessionUser(user);
       } catch (err) {
         console.error("PIN login failed", err);
-        setError("Something went wrong. Please try again.");
+        setError(MESSAGES.loginFailed[language]);
       } finally {
         setLoading(false);
       }
     },
-    [expectedRole],
+    [expectedRole, language],
   );
 
   // Inactivity timeout — resets on any user interaction while logged in.

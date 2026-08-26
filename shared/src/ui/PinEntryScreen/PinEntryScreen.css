@@ -18,6 +18,11 @@
   text-align: center;
 }
 
+.pin-screen__lang {
+  align-self: flex-end;
+  margin-bottom: var(--space-4);
+}
+
 .pin-screen__title {
   font-size: 24px;
   font-weight: 700;

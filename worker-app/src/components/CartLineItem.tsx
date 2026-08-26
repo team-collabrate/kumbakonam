@@ -1,6 +1,16 @@
-import { formatCurrency } from "@kumbakonam/shared";
+import { formatCurrency, useLanguage } from "@kumbakonam/shared";
 import type { CartLine } from "../hooks/useCart";
 import "./CartLineItem.css";
+
+const STRINGS = {
+  each: { en: "each", ta: "ஒன்றுக்கு" },
+  decrease: { en: "Decrease", ta: "குறை" },
+  increase: { en: "Increase", ta: "கூட்டு" },
+  quantity: { en: "quantity", ta: "எண்ணிக்கை" },
+  remove: { en: "Remove", ta: "நீக்கு" },
+  fromCart: { en: "from cart", ta: "கார்ட்டிலிருந்து" },
+  notePlaceholder: { en: "Add a note (e.g. less sugar)", ta: "குறிப்பு சேர் (எ.கா. குறைவான சர்க்கரை)" },
+};
 
 export interface CartLineItemProps {
   line: CartLine;
@@ -11,20 +21,31 @@ export interface CartLineItemProps {
 }
 
 export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteChange }: CartLineItemProps) {
+  const { language } = useLanguage();
   return (
     <li className="cart-line">
       <div className="cart-line__row">
         <div className="cart-line__info">
           <span className="cart-line__name">{line.name}</span>
-          <span className="cart-line__unit-price">{formatCurrency(line.price)} each</span>
+          <span className="cart-line__unit-price">
+            {formatCurrency(line.price)} {STRINGS.each[language]}
+          </span>
         </div>
 
         <div className="cart-line__stepper">
-          <button type="button" onClick={() => onDecrement(line.itemId)} aria-label={`Decrease ${line.name} quantity`}>
+          <button
+            type="button"
+            onClick={() => onDecrement(line.itemId)}
+            aria-label={`${STRINGS.decrease[language]} ${line.name} ${STRINGS.quantity[language]}`}
+          >
             −
           </button>
           <span className="cart-line__qty">{line.qty}</span>
-          <button type="button" onClick={() => onIncrement(line.itemId)} aria-label={`Increase ${line.name} quantity`}>
+          <button
+            type="button"
+            onClick={() => onIncrement(line.itemId)}
+            aria-label={`${STRINGS.increase[language]} ${line.name} ${STRINGS.quantity[language]}`}
+          >
             +
           </button>
         </div>
@@ -35,7 +56,7 @@ export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteC
           type="button"
           className="cart-line__remove"
           onClick={() => onRemove(line.itemId)}
-          aria-label={`Remove ${line.name} from cart`}
+          aria-label={`${STRINGS.remove[language]} ${line.name} ${STRINGS.fromCart[language]}`}
         >
           ×
         </button>
@@ -44,7 +65,7 @@ export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteC
       <input
         type="text"
         className="cart-line__note"
-        placeholder="Add a note (e.g. less sugar)"
+        placeholder={STRINGS.notePlaceholder[language]}
         value={line.note}
         onChange={(e) => onNoteChange(line.itemId, e.target.value)}
       />

@@ -60,6 +60,7 @@ export async function getMenuItem(itemId: string): Promise<MenuItem | null> {
 
 export interface CreateMenuItemInput {
   name: string;
+  nameTa?: string;
   price: number;
   category?: string;
   icon?: string;
@@ -76,7 +77,7 @@ export async function createMenuItem(input: CreateMenuItemInput): Promise<string
   return ref.id;
 }
 
-export type UpdateMenuItemInput = Partial<Pick<MenuItem, "name" | "price" | "category" | "icon" | "active">>;
+export type UpdateMenuItemInput = Partial<Pick<MenuItem, "name" | "nameTa" | "price" | "category" | "icon" | "active">>;
 
 export async function updateMenuItem(itemId: string, input: UpdateMenuItemInput): Promise<void> {
   const db = getFirestoreDb();

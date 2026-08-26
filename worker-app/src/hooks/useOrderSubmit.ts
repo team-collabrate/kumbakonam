@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createOrder, watchOrderSyncStatus, type OrderItem } from "@kumbakonam/shared";
+import { createOrder, useLanguage, watchOrderSyncStatus, type OrderItem } from "@kumbakonam/shared";
 import type { UseCartResult } from "./useCart";
 import type { BillInput } from "../printing/escpos";
 
@@ -14,12 +14,20 @@ export interface UseOrderSubmitResult {
 
 const SUCCESS_MESSAGE_MS = 3000;
 
+const MESSAGES = {
+  needItem: { en: "Add at least one item first.", ta: "முதலில் ஒரு பொருளையாவது சேர்க்கவும்." },
+  needPayment: { en: "Select a payment method.", ta: "பணம் செலுத்தும் முறையைத் தேர்ந்தெடுக்கவும்." },
+  saveFailed: { en: "Could not save the order. Please try again.", ta: "ஆர்டரை சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்." },
+  saved: { en: "Order saved.", ta: "ஆர்டர் சேமிக்கப்பட்டது." },
+};
+
 export function useOrderSubmit(
   cart: UseCartResult,
   workerId: string,
   workerName: string,
   onSaved: (bill: BillInput) => void,
 ): UseOrderSubmitResult {
+  const { language } = useLanguage();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -32,11 +40,11 @@ export function useOrderSubmit(
 
   const submit = useCallback(async () => {
     if (cart.isEmpty) {
-      setError("Add at least one item first.");
+      setError(MESSAGES.needItem[language]);
       return;
     }
     if (!cart.paymentMethod) {
-      setError("Select a payment method.");
+      setError(MESSAGES.needPayment[language]);
       return;
     }
 
@@ -92,16 +100,16 @@ export function useOrderSubmit(
       });
 
       cart.clearCart();
-      setSuccessMessage("Order saved.");
+      setSuccessMessage(MESSAGES.saved[language]);
       if (successTimerRef.current) clearTimeout(successTimerRef.current);
       successTimerRef.current = setTimeout(() => setSuccessMessage(null), SUCCESS_MESSAGE_MS);
     } catch (err) {
       console.error("Order submission failed", err);
-      setError("Could not save the order. Please try again.");
+      setError(MESSAGES.saveFailed[language]);
     } finally {
       setSubmitting(false);
     }
-  }, [cart, workerId, workerName, onSaved]);
+  }, [cart, workerId, workerName, onSaved, language]);
 
   return { submit, submitting, error, successMessage, pendingCount: pendingOrderIds.length };
 }

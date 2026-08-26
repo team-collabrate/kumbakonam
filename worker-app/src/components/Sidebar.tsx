@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ConfirmDialog } from "@kumbakonam/shared";
+import { ConfirmDialog, LanguageToggle, useLanguage } from "@kumbakonam/shared";
 import "./Sidebar.css";
 
 export interface SidebarProps {
@@ -7,8 +7,20 @@ export interface SidebarProps {
   onLogout: () => void;
 }
 
+const STRINGS = {
+  printerSetup: { en: "Printer setup", ta: "பிரிண்டர் அமைப்பு" },
+  logOut: { en: "Log out", ta: "வெளியேறு" },
+  logoutTitle: { en: "Log out?", ta: "வெளியேறவா?" },
+  logoutMessage: {
+    en: "You'll need to enter your PIN again to keep taking orders.",
+    ta: "மீண்டும் ஆர்டர் எடுக்க உங்கள் பின் எண்ணை மீண்டும் உள்ளிட வேண்டும்.",
+  },
+  logoutConfirm: { en: "Log Out", ta: "வெளியேறு" },
+};
+
 /** Thin icon sidebar (Design Brief §5) — printer setup + logout. */
 export function Sidebar({ onOpenPrinterSetup, onLogout }: SidebarProps) {
+  const { language } = useLanguage();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
   return (
@@ -17,19 +29,30 @@ export function Sidebar({ onOpenPrinterSetup, onLogout }: SidebarProps) {
         K
       </span>
       <div className="sidebar__actions">
-        <button type="button" className="sidebar__icon-btn" onClick={onOpenPrinterSetup} aria-label="Printer setup">
+        <LanguageToggle />
+        <button
+          type="button"
+          className="sidebar__icon-btn"
+          onClick={onOpenPrinterSetup}
+          aria-label={STRINGS.printerSetup[language]}
+        >
           🖨
         </button>
-        <button type="button" className="sidebar__icon-btn" onClick={() => setConfirmingLogout(true)} aria-label="Log out">
+        <button
+          type="button"
+          className="sidebar__icon-btn"
+          onClick={() => setConfirmingLogout(true)}
+          aria-label={STRINGS.logOut[language]}
+        >
           ⏻
         </button>
       </div>
 
       {confirmingLogout && (
         <ConfirmDialog
-          title="Log out?"
-          message="You'll need to enter your PIN again to keep taking orders."
-          confirmLabel="Log Out"
+          title={STRINGS.logoutTitle[language]}
+          message={STRINGS.logoutMessage[language]}
+          confirmLabel={STRINGS.logoutConfirm[language]}
           onConfirm={() => {
             setConfirmingLogout(false);
             onLogout();

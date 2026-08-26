@@ -1,4 +1,4 @@
-import type { Order } from "@kumbakonam/shared";
+import type { Language, Order } from "@kumbakonam/shared";
 
 export interface ChartBucket {
   label: string;
@@ -11,7 +11,12 @@ const HOUR_LABELS = Array.from({ length: 24 }, (_, h) => {
   return `${hour12}${period}`;
 });
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_LABELS: Record<Language, string[]> = {
+  en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  ta: ["திங்கள்", "செவ்வாய்", "புதன்", "வியாழன்", "வெள்ளி", "சனி", "ஞாயிறு"],
+};
+
+const WEEK_LABEL: Record<Language, string> = { en: "Week", ta: "வாரம்" };
 
 /** Daily view — bucket by hour, trimmed to the range that actually has activity (avoids a mostly-empty 24-bar chart). */
 export function bucketByHour(orders: Order[]): ChartBucket[] {
@@ -32,17 +37,18 @@ export function bucketByHour(orders: Order[]): ChartBucket[] {
 }
 
 /** Weekly view — bucket by day of week, Monday through Sunday, always all 7 shown for context. */
-export function bucketByDayOfWeek(orders: Order[]): ChartBucket[] {
+export function bucketByDayOfWeek(orders: Order[], language: Language = "en"): ChartBucket[] {
   const totals = new Array<number>(7).fill(0);
   for (const order of orders) {
     const dayIndex = (order.createdAt.toDate().getDay() + 6) % 7; // 0 = Monday
     totals[dayIndex] += order.total;
   }
-  return DAY_LABELS.map((label, i) => ({ label, total: totals[i] }));
+  const labels = DAY_LABELS[language];
+  return labels.map((label, i) => ({ label, total: totals[i] }));
 }
 
 /** Monthly view — bucket by week-of-month (days 1-7, 8-14, ...) so the chart stays ~4-5 bars instead of up to 31. */
-export function bucketByWeekOfMonth(orders: Order[], monthStart: Date): ChartBucket[] {
+export function bucketByWeekOfMonth(orders: Order[], monthStart: Date, language: Language = "en"): ChartBucket[] {
   const totals = new Map<number, number>();
   for (const order of orders) {
     const dayOfMonth = order.createdAt.toDate().getDate();
@@ -51,7 +57,7 @@ export function bucketByWeekOfMonth(orders: Order[], monthStart: Date): ChartBuc
   }
   const weekCount = Math.floor((getDaysInMonth(monthStart) - 1) / 7) + 1;
   return Array.from({ length: weekCount }, (_, i) => ({
-    label: `Week ${i + 1}`,
+    label: `${WEEK_LABEL[language]} ${i + 1}`,
     total: totals.get(i) ?? 0,
   }));
 }

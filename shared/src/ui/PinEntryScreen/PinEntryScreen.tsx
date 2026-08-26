@@ -1,9 +1,15 @@
 import { useState } from "react";
 import type { AppTheme } from "../theme";
+import { LanguageToggle, useLanguage } from "../../i18n";
 import "./PinEntryScreen.css";
 
 const PIN_LENGTH = 4;
 const KEYPAD_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "back"];
+
+const STRINGS = {
+  checking: { en: "Checking…", ta: "சரிபார்க்கிறது…" },
+  backspace: { en: "Backspace", ta: "பின் நீக்கு" },
+};
 
 export interface PinEntryScreenProps {
   theme: AppTheme;
@@ -24,6 +30,7 @@ export function PinEntryScreen({
   error = null,
 }: PinEntryScreenProps) {
   const [pin, setPin] = useState("");
+  const { language } = useLanguage();
 
   const handleDigit = (digit: string) => {
     if (loading || pin.length >= PIN_LENGTH) return;
@@ -43,6 +50,10 @@ export function PinEntryScreen({
   return (
     <div className="pin-screen" data-theme={theme}>
       <div className="pin-screen__panel">
+        <div className="pin-screen__lang">
+          <LanguageToggle />
+        </div>
+
         <h1 className="pin-screen__title">{title}</h1>
         {subtitle && <p className="pin-screen__subtitle">{subtitle}</p>}
 
@@ -53,7 +64,7 @@ export function PinEntryScreen({
         </div>
 
         <div className="pin-screen__status" role="status">
-          {loading ? "Checking…" : error ?? " "}
+          {loading ? STRINGS.checking[language] : error ?? " "}
         </div>
 
         <div className="pin-screen__keypad">
@@ -67,7 +78,7 @@ export function PinEntryScreen({
                   className="pin-screen__key pin-screen__key--back"
                   onClick={handleBackspace}
                   disabled={loading || pin.length === 0}
-                  aria-label="Backspace"
+                  aria-label={STRINGS.backspace[language]}
                 >
                   ⌫
                 </button>

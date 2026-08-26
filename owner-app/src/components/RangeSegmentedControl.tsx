@@ -1,11 +1,14 @@
+import { useLanguage, type Language } from "@kumbakonam/shared";
 import type { RangeMode } from "../utils/dateRange";
 import "./RangeSegmentedControl.css";
 
-const OPTIONS: Array<{ value: RangeMode; label: string }> = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "monthly", label: "Monthly" },
+const OPTIONS: Array<{ value: RangeMode; label: Record<Language, string> }> = [
+  { value: "daily", label: { en: "Daily", ta: "தினசரி" } },
+  { value: "weekly", label: { en: "Weekly", ta: "வாரம்" } },
+  { value: "monthly", label: { en: "Monthly", ta: "மாதம்" } },
 ];
+
+const ARIA_LABEL = { en: "Report period", ta: "அறிக்கை காலம்" };
 
 export interface RangeSegmentedControlProps {
   value: RangeMode;
@@ -13,8 +16,9 @@ export interface RangeSegmentedControlProps {
 }
 
 export function RangeSegmentedControl({ value, onChange }: RangeSegmentedControlProps) {
+  const { language } = useLanguage();
   return (
-    <div className="range-control" role="radiogroup" aria-label="Report period">
+    <div className="range-control" role="radiogroup" aria-label={ARIA_LABEL[language]}>
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -24,7 +28,7 @@ export function RangeSegmentedControl({ value, onChange }: RangeSegmentedControl
           className={`range-control__option ${value === opt.value ? "is-selected" : ""}`}
           onClick={() => onChange(opt.value)}
         >
-          {opt.label}
+          {opt.label[language]}
         </button>
       ))}
     </div>
