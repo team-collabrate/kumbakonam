@@ -25,3 +25,10 @@
   background: var(--color-accent);
   color: var(--color-accent-contrast);
 }
+
+.payment-method__key {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: monospace;
+  opacity: 0.65;
+}
