@@ -4,8 +4,13 @@ const ESC = 0x1b;
 const GS = 0x1d;
 const LF = 0x0a;
 
-/** 32 columns fits common 58mm thermal paper (the cheapest, most common printer size). */
-const PAPER_WIDTH = 32;
+/**
+ * Characters per line at Font A: 48 on 80mm (3 inch) paper, 32 on 58mm.
+ * The cafe runs an 80mm printer — leaving this at 32 would print every
+ * receipt into the left two-thirds of the paper with the totals column
+ * stranded mid-page.
+ */
+const PAPER_WIDTH = 48;
 
 const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   cash: "Cash",

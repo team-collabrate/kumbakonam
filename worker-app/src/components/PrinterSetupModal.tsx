@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLanguage, type Language } from "@kumbakonam/shared";
 import type { PrinterStatus } from "../hooks/usePrinter";
+import { getBluetoothDiagnostics, type BluetoothDiagnostics } from "../printing/webBluetoothPrinter";
 import "./PrinterSetupModal.css";
 
 export interface PrinterSetupModalProps {
@@ -41,14 +42,50 @@ const STRINGS = {
   connectAnother: { en: "Connect a different printer", ta: "வேறு பிரிண்டரை இணை" },
   connect: { en: "Connect Bluetooth Printer", ta: "புளூடூத் பிரிண்டரை இணை" },
   done: { en: "Done", ta: "முடிந்தது" },
+  troubleshootTitle: { en: "Printer not in the list?", ta: "பட்டியலில் பிரிண்டர் இல்லையா?" },
+  checking: { en: "Checking…", ta: "சரிபார்க்கிறது…" },
+  okBrowser: { en: "Browser supports Bluetooth", ta: "உலாவி புளூடூத்தை ஆதரிக்கிறது" },
+  badBrowser: { en: "Use Chrome on Android", ta: "Android இல் Chrome ஐப் பயன்படுத்தவும்" },
+  okAdapter: { en: "Bluetooth is on", ta: "புளூடூத் இயங்குகிறது" },
+  badAdapter: { en: "Turn Bluetooth on", ta: "புளூடூத்தை ஆன் செய்யவும்" },
+  okSecure: { en: "Secure connection", ta: "பாதுகாப்பான இணைப்பு" },
+  badSecure: { en: "Must be opened over https", ta: "https வழியாகத் திறக்க வேண்டும்" },
+  okAndroid: { en: "Android device", ta: "Android சாதனம்" },
+  badAndroid: { en: "Not Android — open this on the tablet", ta: "Android அல்ல — டேப்லெட்டில் திறக்கவும்" },
+  classicNote: {
+    en: "If all of the above are fine and the printer still isn't listed, it likely pairs as a classic Bluetooth printer. Browsers can only reach Bluetooth LE printers, so use the on-screen bill instead.",
+    ta: "மேலே உள்ள அனைத்தும் சரியாக இருந்தும் பிரிண்டர் பட்டியலில் இல்லை என்றால், அது classic Bluetooth பிரிண்டராக இருக்கலாம். உலாவிகள் Bluetooth LE பிரிண்டர்களை மட்டுமே அணுக முடியும், எனவே திரையில் உள்ள பில்லைப் பயன்படுத்தவும்.",
+  },
 };
+
+function Check({ ok, okText, badText }: { ok: boolean; okText: string; badText: string }) {
+  return (
+    <li className={ok ? "is-ok" : "is-bad"}>
+      <span aria-hidden="true">{ok ? "✓" : "✕"}</span>
+      {ok ? okText : badText}
+    </li>
+  );
+}
 
 /** Engineering Plan Phase 3 — one-time "connect printer" setup screen. */
 export function PrinterSetupModal({ status, error, deviceName, onConnect, onClose }: PrinterSetupModalProps) {
   const { language } = useLanguage();
+  const [diagnostics, setDiagnostics] = useState<BluetoothDiagnostics | null>(null);
+
+  // An empty picker looks identical to "user cancelled" from inside
+  // requestDevice(), so the causes have to be probed separately.
+  useEffect(() => {
+    let cancelled = false;
+    getBluetoothDiagnostics().then((d) => {
+      if (!cancelled) setDiagnostics(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Escape only — Enter is left alone so it can't accidentally trigger the
-  // Web USB device picker (that's a real, deliberate action, not a default).
+  // Bluetooth device picker (that's a real, deliberate action, not a default).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -79,6 +116,46 @@ export function PrinterSetupModal({ status, error, deviceName, onConnect, onClos
         >
           {status === "ready" ? STRINGS.connectAnother[language] : STRINGS.connect[language]}
         </button>
+
+        {/* Only worth surfacing while the printer still isn't working. */}
+        {status !== "ready" && (
+          <details className="printer-modal__help">
+            <summary>{STRINGS.troubleshootTitle[language]}</summary>
+            {diagnostics === null ? (
+              <p className="printer-modal__help-note">{STRINGS.checking[language]}</p>
+            ) : (
+              <>
+                <ul className="printer-modal__checks">
+                  <Check
+                    ok={diagnostics.supported && !diagnostics.likelyUnsupportedBrowser}
+                    okText={STRINGS.okBrowser[language]}
+                    badText={STRINGS.badBrowser[language]}
+                  />
+                  {/* getAvailability() is absent on some builds — an unknown
+                      adapter state is not evidence of a problem, so hide it. */}
+                  {diagnostics.adapterAvailable !== null && (
+                    <Check
+                      ok={diagnostics.adapterAvailable}
+                      okText={STRINGS.okAdapter[language]}
+                      badText={STRINGS.badAdapter[language]}
+                    />
+                  )}
+                  <Check
+                    ok={diagnostics.secureContext}
+                    okText={STRINGS.okSecure[language]}
+                    badText={STRINGS.badSecure[language]}
+                  />
+                  <Check
+                    ok={diagnostics.android}
+                    okText={STRINGS.okAndroid[language]}
+                    badText={STRINGS.badAndroid[language]}
+                  />
+                </ul>
+                <p className="printer-modal__help-note">{STRINGS.classicNote[language]}</p>
+              </>
+            )}
+          </details>
+        )}
 
         <button type="button" className="printer-modal__close" onClick={onClose}>
           {STRINGS.done[language]}

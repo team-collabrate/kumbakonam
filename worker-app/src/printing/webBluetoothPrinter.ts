@@ -33,6 +33,43 @@ export function isWebBluetoothSupported(): boolean {
   return typeof navigator !== "undefined" && "bluetooth" in navigator;
 }
 
+export interface BluetoothDiagnostics {
+  /** The browser exposes the Web Bluetooth API at all. */
+  supported: boolean;
+  /** A Bluetooth radio is present and switched on. `null` when unknowable. */
+  adapterAvailable: boolean | null;
+  /** Web Bluetooth is refused outright on plain http:// origins. */
+  secureContext: boolean;
+  /** Android is the only mobile platform where Chrome ships Web Bluetooth. */
+  android: boolean;
+  /** Firefox and Safari have never shipped Web Bluetooth. */
+  likelyUnsupportedBrowser: boolean;
+}
+
+/** Explains an empty device picker — the failure modes are indistinguishable
+ *  from inside requestDevice(), which just resolves to "user picked nothing". */
+export async function getBluetoothDiagnostics(): Promise<BluetoothDiagnostics> {
+  const ua = typeof navigator === "undefined" ? "" : navigator.userAgent;
+  const supported = isWebBluetoothSupported();
+
+  let adapterAvailable: boolean | null = null;
+  if (supported && typeof navigator.bluetooth.getAvailability === "function") {
+    try {
+      adapterAvailable = await navigator.bluetooth.getAvailability();
+    } catch {
+      adapterAvailable = null;
+    }
+  }
+
+  return {
+    supported,
+    adapterAvailable,
+    secureContext: typeof window !== "undefined" && window.isSecureContext,
+    android: /Android/i.test(ua),
+    likelyUnsupportedBrowser: /Firefox|FxiOS|CriOS/i.test(ua) || (/Safari/i.test(ua) && !/Chrome/i.test(ua)),
+  };
+}
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Finds the first characteristic on the device that we're allowed to write to. */
