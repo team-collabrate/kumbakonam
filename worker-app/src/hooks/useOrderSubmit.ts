@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createOrder, useLanguage, watchOrderSyncStatus, type OrderItem } from "@kumbakonam/shared";
 import type { UseCartResult } from "./useCart";
-import type { BillInput } from "../printing/escpos";
+import { billNoFromOrderId, paymentLabelForReceipt, type BillInput } from "../printing/receipt";
 
 export interface UseOrderSubmitResult {
   submit: () => Promise<void>;
@@ -90,10 +90,11 @@ export function useOrderSubmit(
 
       onSaved({
         orderId,
-        cafeName: "Kumbakonam Cafe",
+        billNo: billNoFromOrderId(orderId),
+        // The receipt prints in Tamil regardless of the app's language, so it
+        // takes nameTa when the item has one.
         items: cart.lines.map((l) => ({
-          name: l.name,
-          nameTa: l.nameTa,
+          name: l.nameTa || l.name,
           qty: l.qty,
           price: l.price,
           note: l.note.trim() || undefined,
@@ -102,6 +103,7 @@ export function useOrderSubmit(
         discount: cart.discountAmount,
         total: cart.total,
         paymentMethod: cart.paymentMethod,
+        paymentLabel: paymentLabelForReceipt(cart.paymentMethod),
         workerName,
         createdAt: new Date(),
       });

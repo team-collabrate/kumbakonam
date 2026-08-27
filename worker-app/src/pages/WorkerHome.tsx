@@ -11,7 +11,9 @@ import { useCart } from "../hooks/useCart";
 import { useOrderSubmit } from "../hooks/useOrderSubmit";
 import { usePrinter } from "../hooks/usePrinter";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
-import { buildBillBytes, type BillInput } from "../printing/escpos";
+import type { BillInput } from "../printing/receipt";
+import { renderReceiptCanvas } from "../printing/receiptCanvas";
+import { buildRasterReceipt } from "../printing/escposRaster";
 import "./WorkerHome.css";
 
 const SHORTCUTS_HINT = {
@@ -37,9 +39,17 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
 
   const handleOrderSaved = useCallback(
     async (bill: BillInput) => {
-      if (printer.status !== "ready" || !(await printer.print(buildBillBytes(bill)))) {
-        setBillToShow(bill);
+      if (printer.status === "ready") {
+        try {
+          const canvas = await renderReceiptCanvas(bill);
+          if (await printer.print(buildRasterReceipt(canvas))) return;
+        } catch (err) {
+          console.error("Receipt rendering failed", err);
+        }
       }
+      // Printer missing, refusing, or the render failed — hand the worker the
+      // on-screen bill, which is the same artwork.
+      setBillToShow(bill);
     },
     [printer],
   );
@@ -50,7 +60,8 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
 
   const retryPrint = useCallback(async () => {
     if (!billToShow) return;
-    if (await printer.print(buildBillBytes(billToShow))) {
+    const canvas = await renderReceiptCanvas(billToShow);
+    if (await printer.print(buildRasterReceipt(canvas))) {
       setBillToShow(null);
     }
   }, [billToShow, printer]);

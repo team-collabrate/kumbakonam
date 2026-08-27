@@ -45,68 +45,31 @@
   font-weight: 600;
 }
 
-/* Deliberately a paper receipt, not a UI card — monospace and dashed rules
-   carry the metaphor, so this ignores the app's type scale on purpose. */
-.bill-view__receipt {
+/* The bill is a rendered bitmap now (same artwork the printer receives), so
+   this just presents it as paper: white stock, natural width, crisp scaling. */
+.bill-view__paper {
   background: #ffffff;
-  color: #14151a;
   border-radius: var(--radius-md);
-  padding: var(--space-5);
-  font-family: ui-monospace, "Courier New", monospace;
+  padding: var(--space-3);
   box-shadow: var(--shadow-lg);
-}
-
-.bill-view__receipt hr {
-  border: none;
-  border-top: 1px dashed #c7c5bd;
-  margin: var(--space-3) 0;
-}
-
-.bill-view__cafe {
-  margin: 0;
-  text-align: center;
-  font-size: 18px;
-}
-
-.bill-view__meta {
-  margin: var(--space-1) 0;
-  font-size: 12px;
-  color: #55565f;
-}
-
-.bill-view__items {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.bill-view__items li {
-  margin-bottom: var(--space-2);
-}
-
-.bill-view__item-row {
   display: flex;
-  justify-content: space-between;
-  font-size: 14px;
+  justify-content: center;
 }
 
-.bill-view__item-note {
+.bill-view__image {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+  /* 1-bit artwork: keep the dots sharp rather than smoothing them to grey. */
+  image-rendering: crisp-edges;
+}
+
+.bill-view__rendering {
   margin: 0;
-  padding-left: var(--space-3);
-  font-size: 12px;
+  padding: var(--space-6) 0;
   color: #55565f;
-}
-
-.bill-view__row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 14px;
-  margin: var(--space-1) 0;
-}
-
-.bill-view__row--total {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: var(--text-footnote);
 }
 
 .bill-view__actions {
