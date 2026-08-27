@@ -27,7 +27,7 @@ Both apps are separate PWA builds (separate installable icons/entry points) from
 | State | React Context + local hooks | App is small enough; avoids Redux overhead |
 | Backend | Firebase (Firestore, Auth, Hosting) | Realtime sync, offline persistence built-in, no server ops |
 | Auth | Firebase Auth (custom PIN flow) | See §5 |
-| Printing | Web USB API → ESC/POS commands | Chrome on Android supports Web USB |
+| Printing | Web Bluetooth API → ESC/POS commands | Chrome on Android supports Web Bluetooth; the cafe's printer is Bluetooth |
 | Charts | Recharts | Simple, good with React |
 | Offline | Firestore offline persistence (IndexedDB) | Native support, minimal custom code |
 | Hosting | Firebase Hosting | Free tier, HTTPS, PWA-friendly |
@@ -54,10 +54,12 @@ Both apps are separate PWA builds (separate installable icons/entry points) from
   - `menu` writes → only role `owner`.
   - `orders`/`menu` reads → any authenticated session (worker needs menu; owner needs orders).
 
-### 6. Printing (USB ESC/POS)
-- Web USB API (`navigator.usb.requestDevice`) to pair with USB thermal printer once; device reference cached.
-- Bill content formatted as ESC/POS byte commands (text, bold, cut command) via a small helper (e.g. `escpos-buffer` style utility, hand-rolled since footprint is small).
+### 6. Printing (Bluetooth ESC/POS)
+- Web Bluetooth API (`navigator.bluetooth.requestDevice`) to pair with the BLE thermal printer once; the connection is cached and silently re-established when the link drops.
+- Bill content formatted as ESC/POS byte commands (text, bold, cut command) via a small helper (e.g. `escpos-buffer` style utility, hand-rolled since footprint is small). The byte format is transport-independent — it was unchanged by the move off USB.
+- Writes are chunked (180 bytes) because BLE caps a single ATT write; `writeValueWithResponse` is preferred so each ACK provides flow control for printers with small buffers.
 - Print triggered after order is saved; if printer not connected, fallback to on-screen "Bill" view the worker can screenshot/share.
+- **Constraint:** Web Bluetooth reaches BLE/GATT devices only. A printer that pairs as a classic Bluetooth serial port (SPP/RFCOMM) cannot be driven from any browser — the on-screen bill is the fallback for that hardware.
 
 ### 7. Realtime Sync
 - Owner dashboard subscribes to `orders` collection via `onSnapshot` filtered by date range (today / this week / this month).

@@ -13,24 +13,33 @@ export interface PrinterSetupModalProps {
 
 const STATUS_TEXT: Record<PrinterStatus, Record<Language, string>> = {
   unsupported: {
-    en: "This browser doesn't support Web USB. Use Chrome on Android to print.",
-    ta: "இந்த உலாவி Web USB ஐ ஆதரிக்கவில்லை. அச்சிட Android இல் Chrome ஐப் பயன்படுத்தவும்.",
+    en: "This browser can't use Bluetooth. Use Chrome on Android to print.",
+    ta: "இந்த உலாவி புளூடூத்தைப் பயன்படுத்த முடியாது. அச்சிட Android இல் Chrome ஐப் பயன்படுத்தவும்.",
   },
   checking: {
     en: "Checking for a previously connected printer…",
     ta: "முன்பு இணைக்கப்பட்ட பிரிண்டரைச் சரிபார்க்கிறது…",
   },
-  unpaired: { en: "No printer connected yet.", ta: "இன்னும் பிரிண்டர் இணைக்கப்படவில்லை." },
-  connecting: { en: "Waiting for you to pick a device…", ta: "நீங்கள் ஒரு சாதனத்தைத் தேர்ந்தெடுக்க காத்திருக்கிறது…" },
+  unpaired: {
+    en: "No printer connected yet. Switch the printer on and keep it nearby.",
+    ta: "இன்னும் பிரிண்டர் இணைக்கப்படவில்லை. பிரிண்டரை ஆன் செய்து அருகில் வைக்கவும்.",
+  },
+  connecting: {
+    en: "Pick your printer from the Bluetooth list…",
+    ta: "புளூடூத் பட்டியலிலிருந்து உங்கள் பிரிண்டரைத் தேர்ந்தெடுக்கவும்…",
+  },
   ready: { en: "Printer connected.", ta: "பிரிண்டர் இணைக்கப்பட்டது." },
-  error: { en: "Printer isn't responding.", ta: "பிரிண்டர் பதிலளிக்கவில்லை." },
+  error: {
+    en: "Printer isn't responding. Check it's on and in range.",
+    ta: "பிரிண்டர் பதிலளிக்கவில்லை. அது இயங்குகிறதா, அருகில் உள்ளதா எனப் பார்க்கவும்.",
+  },
 };
 
 const STRINGS = {
   title: { en: "Printer Setup", ta: "பிரிண்டர் அமைப்பு" },
   connected: { en: "Connected", ta: "இணைக்கப்பட்டது" },
   connectAnother: { en: "Connect a different printer", ta: "வேறு பிரிண்டரை இணை" },
-  connect: { en: "Connect Printer", ta: "பிரிண்டரை இணை" },
+  connect: { en: "Connect Bluetooth Printer", ta: "புளூடூத் பிரிண்டரை இணை" },
   done: { en: "Done", ta: "முடிந்தது" },
 };
 
