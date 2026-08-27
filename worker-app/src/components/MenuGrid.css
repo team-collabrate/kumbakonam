@@ -1,13 +1,42 @@
+/* The scroll container — cards travel under the sticky category bar. */
 .menu-grid {
-  padding: var(--space-5);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--space-5) var(--space-5);
 }
 
 .menu-grid__tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-1);
+  padding: var(--space-3) 0;
+  /* Translucent chrome rather than an opaque strip: the grid stays visible
+     through it, so the worker keeps their place while scrolling. */
+  background: var(--material-chrome);
+  backdrop-filter: var(--blur-regular);
+  -webkit-backdrop-filter: var(--blur-regular);
+  scrollbar-width: none;
+}
+
+.menu-grid__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll edge effect — a short fade where content meets the floating bar,
+   instead of a 1px rule that would cut the surface in half. */
+.menu-grid__tabs::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--color-bg), transparent);
+  pointer-events: none;
 }
 
 .menu-grid__tab {
@@ -18,11 +47,13 @@
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
+  letter-spacing: var(--tracking-body);
   cursor: pointer;
   white-space: nowrap;
-  transition: transform 120ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: transform 120ms var(--ease-out), background-color 150ms ease, border-color 150ms ease,
+    color 150ms ease;
 }
 
 .menu-grid__tab:active {
@@ -30,9 +61,12 @@
 }
 
 .menu-grid__tab.is-active {
-  border-color: var(--color-accent);
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-  color: var(--color-accent);
+  border-color: transparent;
+  background: var(--color-accent);
+  /* Weight carries the selected state alongside colour, so it survives
+     colour-blindness and the high-contrast media query. */
+  color: var(--color-accent-contrast);
+  font-weight: 700;
 }
 
 .menu-grid__status {
@@ -48,6 +82,7 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3);
+  padding-top: var(--space-2);
 }
 
 @media (max-width: 560px) {

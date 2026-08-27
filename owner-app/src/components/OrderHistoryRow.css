@@ -29,19 +29,24 @@
 }
 
 .order-row__time {
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
+  letter-spacing: var(--tracking-body);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
 .order-row__meta {
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
+  letter-spacing: var(--tracking-caption);
 }
 
 .order-row__total {
-  font-size: 15px;
+  font-size: var(--text-callout);
   font-weight: 700;
+  letter-spacing: var(--tracking-title);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
 
@@ -59,7 +64,7 @@
 
 .order-row__details {
   padding: 0 0 var(--space-3) var(--space-2);
-  animation: order-row-details-enter 160ms ease-out;
+  animation: order-row-details-enter 160ms var(--ease-out);
 }
 
 @keyframes order-row-details-enter {
@@ -77,22 +82,26 @@
 .order-row__item-line {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  gap: var(--space-3);
+  font-size: var(--text-footnote);
+  font-variant-numeric: tabular-nums;
   padding: var(--space-1) 0;
 }
 
 .order-row__item-note {
   margin: 0 0 var(--space-1);
   padding-left: var(--space-3);
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
 }
 
 .order-row__discount-line {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--text-footnote);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
-  padding-top: var(--space-1);
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
   border-top: 1px dashed var(--color-border);
 }

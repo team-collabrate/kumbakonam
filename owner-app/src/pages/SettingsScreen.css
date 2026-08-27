@@ -4,7 +4,7 @@
 
 .settings-screen__title {
   margin: 0 0 var(--space-4);
-  font-size: 22px;
+  font-size: var(--text-title-1);
 }
 
 .settings-screen__card {
@@ -17,7 +17,7 @@
 
 .settings-screen__label {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-caption);
   color: var(--color-text-muted);
 }
 
@@ -28,15 +28,16 @@
 }
 
 .settings-screen__card--row .settings-screen__label {
-  font-size: 15px;
+  font-size: var(--text-body);
   color: var(--color-text);
   font-weight: 600;
 }
 
 .settings-screen__name {
   margin: var(--space-1) 0 0;
-  font-size: 18px;
+  font-size: var(--text-title-3);
   font-weight: 700;
+  letter-spacing: var(--tracking-title);
 }
 
 .settings-screen__logout {
@@ -46,7 +47,7 @@
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text);
-  font-size: 15px;
+  font-size: var(--text-body);
   font-weight: 600;
   cursor: pointer;
   transition: transform 120ms var(--ease-out);

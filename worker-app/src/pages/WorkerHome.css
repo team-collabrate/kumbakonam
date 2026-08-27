@@ -1,16 +1,20 @@
 .worker-home {
   display: grid;
-  grid-template-columns: 72px 1fr 380px;
+  grid-template-columns: 76px 1fr 400px;
   grid-template-areas: "sidebar menu cart";
   height: 100vh;
   background: var(--color-bg);
   color: var(--color-text);
 }
 
+/* Flex column so the header stays put and only the grid scrolls — that's what
+   lets the category bar behave as a material with cards passing under it. */
 .worker-home__menu {
   grid-area: menu;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 .worker-home__cart {
@@ -19,31 +23,40 @@
 }
 
 .worker-home__menu-header {
+  flex: none;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: var(--space-5) var(--space-5) 0;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-5) var(--space-3);
 }
 
 .worker-home__eyebrow {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-caption);
+  font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  /* Small caps text needs positive tracking to stay legible. */
+  letter-spacing: 0.07em;
 }
 
 .worker-home__title {
   margin: var(--space-1) 0 0;
-  font-size: 24px;
+  font-size: var(--text-title-1);
   font-weight: 700;
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
 }
 
 .worker-home__shortcuts-hint {
-  margin: var(--space-2) var(--space-5) 0;
-  font-size: 12px;
+  flex: none;
+  margin: 0 var(--space-5) var(--space-2);
+  font-size: var(--text-caption);
+  line-height: 1.4;
   color: var(--color-text-muted);
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  letter-spacing: 0;
 }
 
 @media (max-width: 900px) {

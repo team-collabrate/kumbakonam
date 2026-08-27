@@ -1,8 +1,9 @@
 .value-graph-card {
   padding: var(--space-5);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--color-surface);
   border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
 .value-graph-card__header {
@@ -14,8 +15,9 @@
 
 .value-graph-card__title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--text-callout);
   font-weight: 700;
+  letter-spacing: var(--tracking-title);
 }
 
 .value-graph-card__toggle {
@@ -33,10 +35,15 @@
   border: none;
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 700;
+  letter-spacing: var(--tracking-caption);
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, transform 110ms var(--ease-out);
+}
+
+.value-graph-card__toggle button:active {
+  transform: scale(0.95);
 }
 
 .value-graph-card__toggle button.is-active {
@@ -46,7 +53,7 @@
 
 .value-graph-card__status {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
   text-align: center;
   padding: var(--space-6) 0;
 }

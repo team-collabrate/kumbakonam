@@ -1,10 +1,13 @@
 .dashboard-screen {
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-5) var(--space-4) var(--space-4);
 }
 
 .dashboard-screen__title {
   margin: 0 0 var(--space-4);
-  font-size: 22px;
+  font-size: var(--text-title-1);
+  font-weight: 700;
+  line-height: var(--leading-title);
+  letter-spacing: var(--tracking-title);
 }
 
 .dashboard-screen__stats {
@@ -17,8 +20,17 @@
   margin-top: var(--space-3);
 }
 
+/* Secondary figures drop the card material entirely — weight of surface
+   encodes rank, so the primary row reads first without a size change. */
 .dashboard-screen__stats--secondary .stat-card {
   background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: var(--space-3) var(--space-4);
+}
+
+.dashboard-screen__stats--secondary .stat-card__value {
+  font-size: var(--text-title-3);
 }
 
 .dashboard-screen__section {
@@ -26,18 +38,21 @@
 }
 
 .dashboard-screen__section-title {
-  margin: 0 0 var(--space-2);
-  font-size: 15px;
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-callout);
+  font-weight: 700;
+  letter-spacing: var(--tracking-title);
 }
 
 .dashboard-screen__loading {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 
 .dashboard-screen__error {
   color: var(--color-danger);
-  font-size: 14px;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);

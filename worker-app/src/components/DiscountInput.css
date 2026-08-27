@@ -5,7 +5,7 @@
 }
 
 .discount-input__label {
-  font-size: 14px;
+  font-size: var(--text-body);
   color: var(--color-text-muted);
   flex: 1;
 }
@@ -18,7 +18,7 @@
   border: 1px solid var(--color-border);
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 14px;
+  font-size: var(--text-body);
   text-align: right;
 }
 
@@ -36,7 +36,7 @@
   border: none;
   background: var(--color-surface);
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 700;
   cursor: pointer;
   transition: transform 120ms var(--ease-out), background-color 150ms ease, color 150ms ease;

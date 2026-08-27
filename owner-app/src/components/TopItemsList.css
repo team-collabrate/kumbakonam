@@ -6,7 +6,7 @@
 
 .top-items__empty {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 
 .top-items__row {
@@ -30,14 +30,14 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--color-accent) 16%, transparent);
   color: var(--color-accent);
-  font-size: 12px;
+  font-size: var(--text-caption);
   font-weight: 700;
   flex-shrink: 0;
 }
 
 .top-items__name {
   flex: 1;
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -45,6 +45,6 @@
 }
 
 .top-items__qty {
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--color-text-muted);
 }

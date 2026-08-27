@@ -11,7 +11,7 @@
 
 .menu-screen__title {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--text-title-1);
 }
 
 .menu-screen__add {
@@ -21,7 +21,7 @@
   border: none;
   background: var(--color-accent);
   color: var(--color-accent-contrast);
-  font-size: 14px;
+  font-size: var(--text-body);
   font-weight: 700;
   cursor: pointer;
   transition: transform 120ms var(--ease-out);
@@ -33,12 +33,12 @@
 
 .menu-screen__status {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 
 .menu-screen__error {
   color: var(--color-danger);
-  font-size: 14px;
+  font-size: var(--text-body);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);

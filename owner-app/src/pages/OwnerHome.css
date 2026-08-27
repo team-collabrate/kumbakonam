@@ -1,4 +1,5 @@
 .owner-home {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -9,4 +10,8 @@
 .owner-home__content {
   flex: 1;
   overflow-y: auto;
+  /* Content runs beneath the floating tab bar rather than stopping short of
+     it — the last row stays reachable thanks to the scroll padding. */
+  padding-bottom: calc(var(--tabbar-height) + var(--space-4));
+  scroll-padding-bottom: calc(var(--tabbar-height) + var(--space-4));
 }

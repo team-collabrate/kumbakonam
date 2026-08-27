@@ -4,7 +4,7 @@
 
 .reports-screen__title {
   margin: 0 0 var(--space-4);
-  font-size: 22px;
+  font-size: var(--text-title-1);
 }
 
 .reports-screen__chart {
@@ -21,18 +21,18 @@
 
 .reports-screen__history-title {
   margin: 0 0 var(--space-2);
-  font-size: 15px;
+  font-size: var(--text-body);
 }
 
 .reports-screen__status {
   color: var(--color-text-muted);
-  font-size: 14px;
+  font-size: var(--text-body);
 }
 
 .reports-screen__error {
   margin-top: var(--space-4);
   color: var(--color-danger);
-  font-size: 14px;
+  font-size: var(--text-body);
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);

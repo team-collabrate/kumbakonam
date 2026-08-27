@@ -32,14 +32,17 @@
 }
 
 .menu-row__name {
-  font-size: 15px;
+  font-size: var(--text-body);
   font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: var(--tracking-body);
   color: var(--color-text);
 }
 
 .menu-row__meta {
-  font-size: 13px;
+  font-size: var(--text-footnote);
   color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .menu-row__switch {
@@ -73,7 +76,10 @@
   top: 3px;
   background: #ffffff;
   border-radius: 50%;
-  transition: transform 120ms ease;
+  box-shadow: var(--shadow-sm);
+  /* Movement on screen, so it takes the ease-out curve rather than the
+     bare `ease` keyword used for colour. */
+  transition: transform 160ms var(--ease-out);
 }
 
 .menu-row__switch input:checked + .menu-row__switch-track {
