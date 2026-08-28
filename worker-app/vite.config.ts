@@ -29,7 +29,12 @@ export default defineConfig({
       workbox: {
         // App shell only — order/menu data goes through Firestore's own
         // offline cache (TDD §3/§4), not the service worker.
-        globPatterns: ["**/*.{js,css,html,svg}"],
+        //
+        // `png` is here for the receipt logo specifically. It's fetched at
+        // print time, so without it precached the first bill printed on a
+        // dropped connection would come out logo-less — and silently, since
+        // a logo that won't load degrades to a text-only receipt by design.
+        globPatterns: ["**/*.{js,css,html,svg,png}"],
       },
     }),
   ],

@@ -27,6 +27,14 @@ const FONT_STACK = '"Noto Sans Tamil", "Latha", "Nirmala UI", system-ui, sans-se
 const font = (size: number, weight: "normal" | "bold" = "normal") =>
   `${weight} ${size}px ${FONT_STACK}`;
 
+/** Logo box, in printer dots. `scripts/prepare-receipt-logo.mjs` trims and
+ *  resamples the source artwork to exactly this width, so the draw below is
+ *  1:1 — resampling it a second time here would soften the fine temple
+ *  linework right before the print path crushes it to 1-bit. Height is the
+ *  ceiling for a taller mark, not a target. */
+const LOGO_MAX_W = 480;
+const LOGO_MAX_H = 260;
+
 /** Column x-positions, right-aligned to mirror the reference receipt. */
 const COL_QTY_RIGHT = 366;
 const COL_PRICE_RIGHT = 462;
@@ -145,9 +153,7 @@ function paint(
 
   // --- Logo ---------------------------------------------------------------
   if (logo && logo.width > 0) {
-    const maxW = 260;
-    const maxH = 150;
-    const scale = Math.min(maxW / logo.width, maxH / logo.height, 1);
+    const scale = Math.min(LOGO_MAX_W / logo.width, LOGO_MAX_H / logo.height, 1);
     const w = logo.width * scale;
     const h = logo.height * scale;
     draw(() => ctx.drawImage(logo, CENTER - w / 2, y, w, h));
