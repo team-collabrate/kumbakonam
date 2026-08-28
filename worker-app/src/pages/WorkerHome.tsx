@@ -83,9 +83,21 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
 
       <div className="worker-home__menu">
         <div className="worker-home__menu-header">
-          <div>
-            <p className="worker-home__eyebrow">Kumbakonam POS</p>
-            <h1 className="worker-home__title">{sessionUser.name}</h1>
+          <div className="worker-home__brand">
+            <img
+              className="worker-home__logo"
+              src="/logo.png"
+              alt=""
+              width={52}
+              height={47}
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+            <div>
+              <p className="worker-home__eyebrow">Kumbakonam POS</p>
+              <h1 className="worker-home__title">{sessionUser.name}</h1>
+            </div>
           </div>
           <SyncStatusBadge status={syncStatus} />
         </div>

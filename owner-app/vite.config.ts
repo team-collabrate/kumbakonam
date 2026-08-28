@@ -27,7 +27,11 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg}"],
+        // `png` covers the brand logo on the lock screen — without it cached,
+        // reopening the installed app offline would show a logo-less PIN
+        // screen (the img hides itself on error rather than showing a broken
+        // glyph, so the failure would be silent).
+        globPatterns: ["**/*.{js,css,html,svg,png}"],
       },
     }),
   ],

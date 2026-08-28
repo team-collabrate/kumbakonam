@@ -31,6 +31,22 @@
   padding: var(--space-5) var(--space-5) var(--space-3);
 }
 
+.worker-home__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Small enough that the wordmark inside the emblem won't be legible — it
+   reads as a mark here, with "Kumbakonam POS" beside it doing the naming. */
+.worker-home__logo {
+  flex: none;
+  width: 52px;
+  height: auto;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.35));
+}
+
 .worker-home__eyebrow {
   margin: 0;
   font-size: var(--text-caption);

@@ -70,6 +70,20 @@ export function PinEntryScreen({
           <LanguageToggle />
         </div>
 
+        {/* Served from each app's own public/ — the shared package has no
+            asset pipeline of its own. onError hides it rather than leaving a
+            broken-image glyph on the screen staff see most often. */}
+        <img
+          className="pin-screen__logo"
+          src="/logo.png"
+          alt=""
+          width={132}
+          height={119}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+
         <h1 className="pin-screen__title">{title}</h1>
         {subtitle && <p className="pin-screen__subtitle">{subtitle}</p>}
 

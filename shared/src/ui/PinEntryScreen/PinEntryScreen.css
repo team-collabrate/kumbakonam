@@ -23,6 +23,24 @@
   margin-bottom: var(--space-4);
 }
 
+/* Intrinsic width/height are set on the element so the panel doesn't shift
+   when the image decodes — this screen is the first thing drawn on launch. */
+.pin-screen__logo {
+  width: 132px;
+  height: auto;
+  margin-bottom: var(--space-4);
+  /* The emblem sits on transparency and carries its own gold outline, so it
+     needs no plate behind it on either theme — just a shadow to keep it from
+     floating flat against the background. */
+  filter: drop-shadow(0 4px 12px rgb(0 0 0 / 0.28));
+  /* No entrance animation, deliberately. An earlier draft faded it in, which
+     meant the logo's visibility depended on an animation actually advancing —
+     and any environment that doesn't run it (a tab throttled at load, a
+     browser not compositing) holds the element on the keyframe's opacity: 0
+     and leaves the lock screen silently unbranded. On the first screen staff
+     see every shift, a flourish is not worth a failure mode. */
+}
+
 /* The largest type in either app — tracking goes negative, leading tightens. */
 .pin-screen__title {
   font-size: var(--text-title-1);
