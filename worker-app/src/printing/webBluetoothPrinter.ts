@@ -15,10 +15,32 @@ const KNOWN_PRINTER_SERVICES: string[] = [
   "6e400001-b5a3-f393-e0a9-e50e24dcca9e", // Nordic UART
 ];
 
-/** BLE caps a single ATT write, so a receipt has to go out in pieces.
- *  180 sits comfortably under the negotiated MTU on Chrome/Android while
- *  keeping a ~600-byte bill to a handful of writes. */
-const CHUNK_SIZE = 180;
+/**
+ * Bytes per BLE write.
+ *
+ * This is the single biggest lever on how long a bill takes to print, and it
+ * is not really about bandwidth. Every acknowledged write costs at least one
+ * BLE connection interval — 7.5ms on a fast link, 40ms+ on a power-saving
+ * one — so *the number of writes*, not the number of bytes, sets the floor.
+ * A receipt with a logo is ~50 KB: at 180 bytes that is 300+ round trips and
+ * a visible wait at the counter, which is what staff were feeling.
+ *
+ * 512 is the largest value an ATT attribute can hold, and Chrome splits
+ * anything over the negotiated MTU into a long write for us. Printers that
+ * won't take a write this large are handled by stepping down — see
+ * CHUNK_FALLBACKS.
+ */
+const CHUNK_SIZE = 512;
+
+/**
+ * Progressively smaller writes to fall back to, ending at the 20 bytes a
+ * default 23-byte MTU allows.
+ *
+ * Retrying a rejected write at a smaller size is safe: the printer is being
+ * fed one flat byte stream, so where the chunk boundaries fall carries no
+ * meaning, and a write that was refused delivered nothing to re-send.
+ */
+const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
 /** Cheap printers have small input buffers; a short gap between chunks stops
  *  them overflowing and printing garbage halfway down the receipt. */
@@ -161,13 +183,30 @@ export async function printToDevice(
   const { characteristic } = active;
   const canWriteWithResponse = characteristic.properties.write;
 
-  for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
-    const chunk = data.slice(offset, offset + CHUNK_SIZE);
-    if (canWriteWithResponse) {
-      await characteristic.writeValueWithResponse(chunk);
-    } else {
-      await characteristic.writeValueWithoutResponse(chunk);
-      await sleep(CHUNK_DELAY_MS);
+  // Uint8Array is generic over its buffer since TS 5.7, and BufferSource
+  // rejects the SharedArrayBuffer case — so this has to be the narrow form
+  // that `data.slice()` actually returns, not a bare Uint8Array.
+  const write = (chunk: Uint8Array<ArrayBuffer>) =>
+    canWriteWithResponse
+      ? characteristic.writeValueWithResponse(chunk)
+      : characteristic.writeValueWithoutResponse(chunk).then(() => sleep(CHUNK_DELAY_MS));
+
+  // Starts optimistic and only shrinks. Once a size is known to work on this
+  // link it is kept for the rest of the receipt, so a printer that needs
+  // small writes pays the discovery cost once rather than on every chunk.
+  let size = CHUNK_SIZE;
+  let offset = 0;
+
+  while (offset < data.length) {
+    const chunk = data.slice(offset, offset + size);
+    try {
+      await write(chunk);
+      offset += chunk.length;
+    } catch (err) {
+      const next = CHUNK_FALLBACKS.find((candidate) => candidate < size);
+      if (next === undefined) throw err; // already as small as BLE allows
+      console.warn(`Printer refused a ${size}-byte write; retrying at ${next}.`);
+      size = next;
     }
   }
 

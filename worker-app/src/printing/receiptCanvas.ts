@@ -31,9 +31,13 @@ const font = (size: number, weight: "normal" | "bold" = "normal") =>
  *  resamples the source artwork to exactly this width, so the draw below is
  *  1:1 — resampling it a second time here would soften the fine temple
  *  linework right before the print path crushes it to 1-bit. Height is the
- *  ceiling for a taller mark, not a target. */
-const LOGO_MAX_W = 480;
-const LOGO_MAX_H = 260;
+ *  ceiling for a taller mark, not a target.
+ *
+ *  Every dot of logo height costs 72 bytes over the air and a dot of paper,
+ *  so this is a print-speed setting as much as a design one. Regenerate the
+ *  PNG at the same width after changing it. */
+const LOGO_MAX_W = 320;
+const LOGO_MAX_H = 180;
 
 /** Column x-positions, right-aligned to mirror the reference receipt. */
 const COL_QTY_RIGHT = 366;
@@ -308,7 +312,9 @@ function paint(
     });
   }
 
-  // Blank tail so the tear-off edge clears the last line.
-  y += 40;
+  // Blank tail so the tear-off edge clears the last line. Kept short because
+  // the cut sequence already feeds three lines past this point — anything
+  // more here is paper and transfer time spent printing nothing.
+  y += 16;
   return Math.ceil(y);
 }
