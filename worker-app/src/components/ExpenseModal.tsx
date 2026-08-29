@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { createExpense, formatCurrency, useLanguage } from "@kumbakonam/shared";
+import { createExpense, useLanguage } from "@kumbakonam/shared";
 import "./ExpenseModal.css";
 
 const STRINGS = {
@@ -15,35 +15,35 @@ const STRINGS = {
   close: { en: "Close", ta: "மூடு" },
   needName: { en: "Type what was bought.", ta: "என்ன வாங்கியது என்று எழுதவும்." },
   needAmount: { en: "Enter an amount above zero.", ta: "பூஜ்ஜியத்திற்கு மேல் தொகையை உள்ளிடவும்." },
-  failed: { en: "Could not save. Please try again.", ta: "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்." },
-  savedToday: { en: "Recorded just now", ta: "இப்போது பதிவு செய்தது" },
 };
 
 export interface ExpenseModalProps {
   workerId: string;
+  /** Restored when a refused write reopens this — otherwise blank. */
+  initialName?: string;
+  initialAmount?: string;
+  initialError?: string | null;
   onClose: () => void;
+  /** Fired as soon as the entry is in the local cache; the parent closes. */
+  onSaved: () => void;
+  /** A genuine refusal, after the dialog has already gone. */
+  onFailed: (values: { name: string; amount: string }) => void;
 }
 
-interface RecordedExpense {
-  id: string;
-  name: string;
-  amount: number;
-}
-
-/**
- * Records money spent from the till.
- *
- * Stays open after each save and keeps a running list, because buying is a
- * trip, not a single purchase — a worker back from the market has vegetables,
- * milk and gas to enter, and closing after each one would make them reopen it
- * three times.
- */
-export function ExpenseModal({ workerId, onClose }: ExpenseModalProps) {
+/** Records money spent from the till. One entry, then it gets out of the way. */
+export function ExpenseModal({
+  workerId,
+  initialName = "",
+  initialAmount = "",
+  initialError = null,
+  onClose,
+  onSaved,
+  onFailed,
+}: ExpenseModalProps) {
   const { language } = useLanguage();
-  const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [recorded, setRecorded] = useState<RecordedExpense[]>([]);
+  const [name, setName] = useState(initialName);
+  const [amount, setAmount] = useState(initialAmount);
+  const [error, setError] = useState<string | null>(initialError);
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,30 +76,24 @@ export function ExpenseModal({ workerId, onClose }: ExpenseModalProps) {
         return;
       }
 
-      setError(null);
-      const { expenseId, committed } = createExpense({ name: trimmed, amount: value, workerId });
+      const { committed } = createExpense({ name: trimmed, amount: value, workerId });
 
-      // Treated as saved the moment it's in the local cache — the write
-      // syncs on its own. Awaiting `committed` here would freeze the form
-      // for the length of any wifi outage, since a Firestore write promise
-      // doesn't resolve while offline.
-      setRecorded((prev) => [{ id: expenseId, name: trimmed, amount: value }, ...prev]);
-      setName("");
-      setAmount("");
-      nameRef.current?.focus();
+      // Saved the moment it's in the local cache — the write syncs on its
+      // own. Awaiting would hold the dialog open for the length of any wifi
+      // outage, since a Firestore write promise doesn't resolve offline.
+      onSaved();
 
+      // This closure outlives the dialog on purpose. A refusal (bad rules,
+      // a deactivated worker) has to reach someone, and by the time it
+      // arrives this component is already unmounted — so the handler lives
+      // in the parent, which reopens the form with the values intact.
       committed.catch((err) => {
-        // A genuine refusal — bad rules, bad data. Worth showing, unlike
-        // being offline, which is expected and self-healing.
         console.error("Expense write refused", err);
-        setError(STRINGS.failed[language]);
-        setRecorded((prev) => prev.filter((r) => r.id !== expenseId));
+        onFailed({ name: trimmed, amount });
       });
     },
-    [name, amount, workerId, language],
+    [name, amount, workerId, language, onSaved, onFailed],
   );
-
-  const total = recorded.reduce((sum, r) => sum + r.amount, 0);
 
   return (
     <div className="expense__backdrop" role="dialog" aria-modal="true" aria-label={STRINGS.title[language]}>
@@ -137,23 +131,6 @@ export function ExpenseModal({ workerId, onClose }: ExpenseModalProps) {
         <div className="expense__status" role="status">
           {error ?? " "}
         </div>
-
-        {recorded.length > 0 && (
-          <div className="expense__recorded">
-            <div className="expense__recorded-head">
-              <span>{STRINGS.savedToday[language]}</span>
-              <strong>{formatCurrency(total)}</strong>
-            </div>
-            <ul>
-              {recorded.map((r) => (
-                <li key={r.id}>
-                  <span>{r.name}</span>
-                  <span>{formatCurrency(r.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
 
         <div className="expense__actions">
           <button type="button" className="expense__close" onClick={onClose}>

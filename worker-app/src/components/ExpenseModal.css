@@ -90,53 +90,6 @@
   color: var(--color-warning);
 }
 
-/* What this visit has already recorded, so the worker can see the trip add
-   up and spot a double entry before leaving the dialog. */
-.expense__recorded {
-  border-top: 1px solid var(--color-border);
-  padding-top: var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.expense__recorded-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  font-size: var(--text-caption);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--color-text-muted);
-}
-
-.expense__recorded-head strong {
-  font-size: var(--text-body);
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.expense__recorded ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  /* A long buying trip shouldn't push the buttons off screen. */
-  max-height: 160px;
-  overflow-y: auto;
-}
-
-.expense__recorded li {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  font-size: var(--text-footnote);
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .expense__actions {
   display: flex;
   gap: var(--space-3);

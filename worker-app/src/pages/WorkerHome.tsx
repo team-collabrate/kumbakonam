@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import {
   findOrCreateCustomer,
   SyncStatusBadge,
+  useLanguage,
   useOnlineStatus,
   type PaymentMethod,
   type SessionUser,
@@ -29,12 +30,18 @@ import { renderReceiptCanvas } from "../printing/receiptCanvas";
 import { buildRasterReceipt } from "../printing/escposRaster";
 import "./WorkerHome.css";
 
+const EXPENSE_FAILED = {
+  en: "That didn't save. Check the amount and try again.",
+  ta: "அது சேமிக்கப்படவில்லை. தொகையைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+};
+
 export interface WorkerHomeProps {
   sessionUser: SessionUser;
   onLogout: () => void;
 }
 
 export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
+  const { language } = useLanguage();
   const { items, loading, error: menuError } = useMenu();
   const { categories, activeCategory, setActiveCategory, cycleCategory, visibleItems } = useMenuCategories(items);
   const cart = useCart();
@@ -45,6 +52,9 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
+  // Values carried back into the form when a write is refused after the
+  // dialog has already closed, so a rejected expense isn't lost in a log.
+  const [expenseRetry, setExpenseRetry] = useState<{ name: string; amount: string } | null>(null);
   const [creditOpen, setCreditOpen] = useState(false);
   const [khataOpen, setKhataOpen] = useState(false);
   const outstanding = useOutstandingCustomers();
@@ -79,7 +89,15 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   }, [billToShow, printer]);
 
   const openPrinterSetup = useCallback(() => setPrinterSetupOpen(true), []);
-  const openExpenses = useCallback(() => setExpensesOpen(true), []);
+  const openExpenses = useCallback(() => {
+    setExpenseRetry(null);
+    setExpensesOpen(true);
+  }, []);
+
+  const onExpenseFailed = useCallback((values: { name: string; amount: string }) => {
+    setExpenseRetry(values);
+    setExpensesOpen(true);
+  }, []);
   const openKhata = useCallback(() => setKhataOpen(true), []);
 
   // Choosing Split is only half the decision — the amounts still have to be
@@ -223,7 +241,21 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
       )}
 
       {expensesOpen && (
-        <ExpenseModal workerId={sessionUser.userId} onClose={() => setExpensesOpen(false)} />
+        <ExpenseModal
+          workerId={sessionUser.userId}
+          initialName={expenseRetry?.name ?? ""}
+          initialAmount={expenseRetry?.amount ?? ""}
+          initialError={expenseRetry ? EXPENSE_FAILED[language] : null}
+          onClose={() => {
+            setExpensesOpen(false);
+            setExpenseRetry(null);
+          }}
+          onSaved={() => {
+            setExpensesOpen(false);
+            setExpenseRetry(null);
+          }}
+          onFailed={onExpenseFailed}
+        />
       )}
 
       {printerSetupOpen && (
