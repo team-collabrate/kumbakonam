@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useLanguage, type MenuItem } from "@kumbakonam/shared";
+import { MENU_CATEGORIES, useLanguage, type MenuItem } from "@kumbakonam/shared";
 import "./MenuItemForm.css";
 
 export interface MenuItemFormValues {
@@ -107,10 +107,13 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
             list="menu-form-categories"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="Hot Drinks"
+            placeholder="Breakfast"
           />
+          {/* The four the shop sells by come first; anything already in use
+              is offered after, so items on an older category set can still
+              be matched exactly rather than retyped. */}
           <datalist id="menu-form-categories">
-            {existingCategories.map((c) => (
+            {[...MENU_CATEGORIES, ...existingCategories.filter((c) => !MENU_CATEGORIES.includes(c as never))].map((c) => (
               <option key={c} value={c} />
             ))}
           </datalist>

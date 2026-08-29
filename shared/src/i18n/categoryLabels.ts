@@ -1,11 +1,31 @@
 import type { Language } from "./LanguageContext";
 
 /**
- * Menu category display names. `category` is stored on `MenuItem` as a
- * stable English slug (used for filtering/grouping); this only translates
- * how it's *shown* on screen. Unknown categories fall back to the raw slug.
+ * The categories the shop sells by. Stored on `MenuItem.category` as the
+ * English string; the labels below only change how they're shown.
+ *
+ * Order matters — it's the order of the tabs at the counter, and it runs
+ * through the day rather than alphabetically, so a worker reaches for the
+ * one they're serving now.
+ */
+export const MENU_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Tea"] as const;
+
+export type MenuCategory = (typeof MENU_CATEGORIES)[number];
+
+/**
+ * Display names by language. Unknown categories fall back to the raw stored
+ * string, which is what keeps items from an older category set readable
+ * instead of vanishing.
  */
 const CATEGORY_LABELS: Record<string, Record<Language, string>> = {
+  Breakfast: { en: "Breakfast", ta: "காலை உணவு" },
+  Lunch: { en: "Lunch", ta: "மதிய உணவு" },
+  Dinner: { en: "Dinner", ta: "இரவு உணவு" },
+  Tea: { en: "Tea", ta: "தேநீர்" },
+
+  // Superseded by the four above. Kept translated because menu items and
+  // past orders created under them still exist, and a stored category is
+  // just a string — nothing rewrites the old ones automatically.
   "Hot Drinks": { en: "Hot Drinks", ta: "சூடான பானங்கள்" },
   Juice: { en: "Juice", ta: "ஜூஸ்" },
   Snacks: { en: "Snacks", ta: "ஸ்நாக்ஸ்" },

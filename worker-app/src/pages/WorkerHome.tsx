@@ -8,6 +8,7 @@ import {
 } from "@kumbakonam/shared";
 import { Sidebar } from "../components/Sidebar";
 import { MenuGrid } from "../components/MenuGrid";
+import { CategoryTabs } from "../components/CategoryTabs";
 import { CartPanel } from "../components/CartPanel";
 import { PrinterSetupModal } from "../components/PrinterSetupModal";
 import { BillView } from "../components/BillView";
@@ -102,11 +103,12 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
       <Sidebar onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
 
       <div className="worker-home__menu">
-        {/* Logo only. The app name, the signed-in worker and the shortcut
-            crib all came off — staff know where they work and which keys
-            they use, and the row they occupied is worth more as menu. The
-            sync badge stays: it is the only place the counter learns an
-            order hasn't reached the server yet. */}
+        {/* Logo, category tabs, sync badge — one row. The app name, the
+            signed-in worker and the shortcut crib came off entirely; the
+            tabs moved up from the grid so the menu starts at the top of its
+            own scroll area with nothing floating over the cards. The sync
+            badge stays: it is the only place the counter learns an order
+            hasn't reached the server yet. */}
         <div className="worker-home__menu-header">
           <img
             className="worker-home__logo"
@@ -118,12 +120,14 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
               e.currentTarget.style.display = "none";
             }}
           />
+          <CategoryTabs
+            categories={categories}
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+          />
           <SyncStatusBadge status={syncStatus} />
         </div>
         <MenuGrid
-          categories={categories}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
           visibleItems={visibleItems}
           totalItemCount={items.length}
           loading={loading}

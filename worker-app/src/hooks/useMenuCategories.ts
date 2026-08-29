@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import type { MenuItem } from "@kumbakonam/shared";
+import { MENU_CATEGORIES, type MenuItem } from "@kumbakonam/shared";
 
 export const ALL_TAB = "All";
 
@@ -21,7 +21,16 @@ export function useMenuCategories(items: MenuItem[]): UseMenuCategoriesResult {
     items.forEach((item) => {
       if (item.category) found.add(item.category);
     });
-    return [ALL_TAB, ...Array.from(found).sort()];
+
+    // The four the shop sells by always show, in day order, whether or not
+    // anything is filed under them yet — an empty Dinner tab is information,
+    // and a tab that appears only once someone adds an item reads as a bug.
+    const canonical: string[] = [...MENU_CATEGORIES];
+    canonical.forEach((c) => found.delete(c));
+
+    // Anything left is from an older category set. It keeps a tab so those
+    // items stay reachable at the counter until they're refiled.
+    return [ALL_TAB, ...canonical, ...Array.from(found).sort()];
   }, [items]);
 
   const cycleCategory = useCallback(
