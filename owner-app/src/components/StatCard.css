@@ -30,3 +30,18 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-text);
 }
+
+/* Money leaving the till, and a net that has gone the wrong way. Neither
+   uses the brand accent: these are states, not emphasis, and the accent is
+   already spoken for by selected controls. */
+.stat-card__value--spend {
+  color: var(--color-warning);
+}
+
+.stat-card__value--negative {
+  color: var(--color-danger);
+}
+
+.stat-card__value--positive {
+  color: var(--color-success);
+}

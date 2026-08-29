@@ -38,3 +38,49 @@
   background: color-mix(in srgb, var(--color-danger) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--color-danger) 25%, transparent);
 }
+
+/* Period totals, above the chart that explains them. Three equal columns so
+   the eye compares them rather than reading them as a sentence. */
+.reports-screen__summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.reports-screen__summary > div {
+  min-width: 0;
+}
+
+.reports-screen__summary dt {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: var(--tracking-caption);
+}
+
+.reports-screen__summary dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-title-3);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: var(--tracking-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.reports-screen__summary dd.is-spend {
+  color: var(--color-warning);
+}
+
+.reports-screen__summary dd.is-net {
+  color: var(--color-success);
+}
+
+.reports-screen__summary dd.is-negative {
+  color: var(--color-danger);
+}
