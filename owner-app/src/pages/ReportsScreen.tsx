@@ -3,6 +3,7 @@ import { formatCurrency, useLanguage } from "@kumbakonam/shared";
 import { getRange, type RangeMode } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
+import { useCustomers } from "../hooks/useCustomers";
 import { bucketByDayOfWeek, bucketByHour, bucketByWeekOfMonth } from "../utils/chartBuckets";
 import { RangeSegmentedControl } from "../components/RangeSegmentedControl";
 import { SalesChart } from "../components/SalesChart";
@@ -14,6 +15,8 @@ const STRINGS = {
   title: { en: "Reports", ta: "அறிக்கைகள்" },
   orderHistory: { en: "Order History", ta: "ஆர்டர் வரலாறு" },
   spending: { en: "Spending", ta: "செலவுகள்" },
+  onCredit: { en: "Outstanding Credit", ta: "நிலுவை கடன்" },
+  nobodyOwes: { en: "Nobody owes anything.", ta: "யாருக்கும் கடன் இல்லை." },
   sales: { en: "Sales", ta: "விற்பனை" },
   spent: { en: "Spent", ta: "செலவு" },
   net: { en: "Net", ta: "நிகர" },
@@ -28,13 +31,14 @@ export function ReportsScreen() {
   const range = useMemo(() => getRange(mode), [mode]);
   const { orders, loading, error } = useOrdersInRange(range);
   const spend = useExpensesInRange(range);
+  const customers = useCustomers();
 
   const totalSales = useMemo(() => orders.reduce((sum, o) => sum + o.total, 0), [orders]);
   const net = totalSales - spend.totalSpent;
 
   // Either subscription failing means the figures below would be wrong
   // rather than merely incomplete, so one error hides the whole report.
-  const failure = error ?? spend.error;
+  const failure = error ?? spend.error ?? customers.error;
 
   const chartData = useMemo(() => {
     if (mode === "daily") return bucketByHour(orders);
@@ -79,6 +83,24 @@ export function ReportsScreen() {
               <p className="reports-screen__status">{STRINGS.empty[language]}</p>
             ) : (
               orders.map((order) => <OrderHistoryRow key={order.orderId} order={order} />)
+            )}
+          </section>
+
+          {/* Balances are a running total, not a figure for this period —
+              they sit below the period sections for that reason. */}
+          <section className="reports-screen__history">
+            <h2 className="reports-screen__history-title">{STRINGS.onCredit[language]}</h2>
+            {customers.loading ? (
+              <p className="reports-screen__status">{STRINGS.loading[language]}</p>
+            ) : customers.outstanding.length === 0 ? (
+              <p className="reports-screen__status">{STRINGS.nobodyOwes[language]}</p>
+            ) : (
+              customers.outstanding.map((customer) => (
+                <div className="expense-row" key={customer.customerId}>
+                  <span className="expense-row__name">{customer.name}</span>
+                  <span className="expense-row__amount">{formatCurrency(customer.balance)}</span>
+                </div>
+              ))
             )}
           </section>
 

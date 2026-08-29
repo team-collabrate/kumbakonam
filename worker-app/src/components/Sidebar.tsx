@@ -3,12 +3,14 @@ import { ConfirmDialog, LanguageToggle, useLanguage } from "@kumbakonam/shared";
 import "./Sidebar.css";
 
 export interface SidebarProps {
+  onOpenKhata: () => void;
   onOpenExpenses: () => void;
   onOpenPrinterSetup: () => void;
   onLogout: () => void;
 }
 
 const STRINGS = {
+  khata: { en: "Credit book", ta: "கடன் புத்தகம்" },
   expenses: { en: "Record spending", ta: "செலவு பதிவு" },
   printerSetup: { en: "Printer setup", ta: "பிரிண்டர் அமைப்பு" },
   logOut: { en: "Log out", ta: "வெளியேறு" },
@@ -20,8 +22,8 @@ const STRINGS = {
   logoutConfirm: { en: "Log Out", ta: "வெளியேறு" },
 };
 
-/** Thin icon sidebar (Design Brief §5) — spending, printer setup, logout. */
-export function Sidebar({ onOpenExpenses, onOpenPrinterSetup, onLogout }: SidebarProps) {
+/** Thin icon sidebar (Design Brief §5) — credit book, spending, printer, logout. */
+export function Sidebar({ onOpenKhata, onOpenExpenses, onOpenPrinterSetup, onLogout }: SidebarProps) {
   const { language } = useLanguage();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
@@ -32,6 +34,15 @@ export function Sidebar({ onOpenExpenses, onOpenPrinterSetup, onLogout }: Sideba
       </span>
       <div className="sidebar__actions">
         <LanguageToggle />
+        <button
+          type="button"
+          className="sidebar__icon-btn"
+          onClick={onOpenKhata}
+          aria-label={STRINGS.khata[language]}
+          title={STRINGS.khata[language]}
+        >
+          📒
+        </button>
         <button
           type="button"
           className="sidebar__icon-btn"

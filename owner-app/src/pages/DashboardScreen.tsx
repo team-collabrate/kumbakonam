@@ -3,6 +3,7 @@ import { formatCurrency, useLanguage } from "@kumbakonam/shared";
 import { getRange } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
+import { useCustomers } from "../hooks/useCustomers";
 import { computeDashboardStats } from "../utils/dashboardStats";
 import { bucketByDayOfWeek, bucketByWeekOfMonth } from "../utils/chartBuckets";
 import { StatCard } from "../components/StatCard";
@@ -17,6 +18,7 @@ const STRINGS = {
   monthlySales: { en: "Monthly Sales", ta: "மாத விற்பனை" },
   spentToday: { en: "Spent Today", ta: "இன்றைய செலவு" },
   netToday: { en: "Net Today", ta: "இன்றைய நிகர" },
+  outstanding: { en: "On Credit", ta: "நிலுவை கடன்" },
   ordersToday: { en: "Orders Today", ta: "இன்றைய ஆர்டர்கள்" },
   avgOrderToday: { en: "Avg Order Today", ta: "இன்றைய சராசரி ஆர்டர்" },
   topItemsToday: { en: "Top Items Today", ta: "இன்றைய முக்கிய பொருட்கள்" },
@@ -35,6 +37,7 @@ export function DashboardScreen() {
   const weekly = useOrdersInRange(weeklyRange);
   const monthly = useOrdersInRange(monthlyRange);
   const dailySpend = useExpensesInRange(dailyRange);
+  const customers = useCustomers();
 
   const dailyStats = useMemo(() => computeDashboardStats(daily.orders), [daily.orders]);
   const weeklyTotal = useMemo(() => computeDashboardStats(weekly.orders).totalSales, [weekly.orders]);
@@ -49,7 +52,7 @@ export function DashboardScreen() {
   const netToday = dailyStats.totalSales - dailySpend.totalSpent;
 
   const graphLoading = graphMode === "weekly" ? weekly.loading : monthly.loading;
-  const error = daily.error ?? weekly.error ?? monthly.error ?? dailySpend.error;
+  const error = daily.error ?? weekly.error ?? monthly.error ?? dailySpend.error ?? customers.error;
 
   return (
     <div className="dashboard-screen">
@@ -83,6 +86,13 @@ export function DashboardScreen() {
           </div>
 
           <div className="dashboard-screen__stats dashboard-screen__stats--secondary">
+            {/* Not part of today's net: this is money already counted as a
+                sale on the day it was taken, still waiting to be collected. */}
+            <StatCard
+              label={STRINGS.outstanding[language]}
+              value={formatCurrency(customers.totalOutstanding)}
+              tone={customers.totalOutstanding > 0 ? "spend" : "neutral"}
+            />
             <StatCard label={STRINGS.ordersToday[language]} value={String(dailyStats.orderCount)} />
             <StatCard label={STRINGS.avgOrderToday[language]} value={formatCurrency(dailyStats.avgOrderValue)} />
           </div>

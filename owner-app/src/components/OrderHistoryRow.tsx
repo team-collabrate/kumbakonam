@@ -9,6 +9,7 @@ const PAYMENT_LABEL: Record<Order["paymentMethod"], Record<Language, string>> = 
   cash: { en: "Cash", ta: "பணம்" },
   upi: { en: "UPI", ta: "UPI" },
   split: { en: "Split", ta: "பிரித்து" },
+  credit: { en: "Credit", ta: "கடன்" },
   card: { en: "Card", ta: "கார்டு" },
 };
 

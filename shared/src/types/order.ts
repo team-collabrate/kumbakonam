@@ -4,11 +4,14 @@ import type { Timestamp } from "firebase/firestore";
  * `split` is cash and UPI together on one bill — the cafe takes no cards, so
  * the card button became the split button.
  *
+ * `credit` is a regular buying on account: the sale happens, no money moves,
+ * and the total lands on the customer's balance instead.
+ *
  * `card` is legacy: no longer offered at the till, but orders taken before
  * the change still carry it, so it stays in the union. Dropping it would
  * make historical orders render a blank payment label in the owner app.
  */
-export type PaymentMethod = "cash" | "upi" | "split" | "card";
+export type PaymentMethod = "cash" | "upi" | "split" | "credit" | "card";
 export type OrderStatus = "completed";
 
 /** Embedded line item inside `orders/{orderId}.items` — see 05_Data_Model.md §4 */
@@ -41,6 +44,11 @@ export interface Order {
   cashAmount?: number;
   /** UPI/GPay portion of a `split` bill. Absent on every other method. */
   upiAmount?: number;
+  /** Set only on a `credit` order — who owes for it. */
+  customerId?: string;
+  /** Customer name captured at the time of sale, so history reads even if
+   *  the customer record is later renamed. */
+  customerName?: string;
   /** Reference to `users.userId` who created the order */
   workerId: string;
   createdAt: Timestamp;

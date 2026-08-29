@@ -8,6 +8,8 @@ menu/{itemId}
 orders/{orderId}
   └── items: [ { itemId, name, price, qty, note } ]  (embedded array, not subcollection)
 expenses/{expenseId}
+customers/{customerId}
+customerPayments/{paymentId}
 ```
 
 ### 2. `users` Collection
@@ -76,10 +78,32 @@ Money going out of the counter till — vegetables, milk, gas, and the rest of t
 
 > Writes are **not awaited** before the UI confirms. A Firestore write promise does not resolve while the client is offline, so awaiting it would freeze the counter for the length of a wifi outage. The document id is minted locally, the write syncs by itself, and the returned `committed` promise is only used to catch a genuine refusal.
 
+### 4c. `customers` and `customerPayments`
+Regulars who buy on credit (கடன் / khata) — a bulk customer who takes an order every day and settles periodically.
+
+**`customers/{customerId}`**
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | As first typed, e.g. "Ravi Stores". 1–120 chars |
+| `nameKey` | string | Lower-cased, whitespace-collapsed `name`. Matches a returning customer to their existing record instead of creating a second one with the balance split across spellings |
+| `balance` | number | Outstanding ₹. Moved with Firestore `increment` — atomic server-side, and unlike a transaction it still works while the till is offline |
+| `createdAt` / `updatedAt` | timestamp | |
+
+**`customerPayments/{paymentId}`** — append-only receipts: `customerId`, `customerName`, `amount`, `workerId`, `createdAt`.
+
+> **The counter only ever sees `balance > 0`.** A settled customer drops off the till's list by itself; nothing is deleted, and the owner keeps the full record. A customer takes credit again simply by being picked or re-typed.
+
+> **Two writes, not one.** A credit order writes the order and increments the balance separately, and a settlement writes a receipt and decrements the balance separately. They are not atomic with each other, because Firestore transactions need a connection and this has to work mid-outage. `customerPayments` is the source of truth if a balance is ever doubted — that is what the audit trail is for.
+
+> **Credit orders still count as sales** on the day they are taken; the money owed shows separately as On Credit. Sales measures trade, the balance measures collection.
+
 ### 5. Relationships
 - `orders.workerId` → `users.userId` (which staff member created the order)
 - `orders.items[].itemId` → `menu.itemId` (denormalized copy; not a live reference)
 - `expenses.workerId` → `users.userId` (which staff member recorded the spend)
+- `orders.customerId` → `customers.customerId` (set only on a `credit` order)
+- `customerPayments.customerId` → `customers.customerId`
 
 ### 6. Aggregation Approach (v1)
 No separate "daily summary" collection for v1 — owner app computes today/week/month totals client-side by querying `orders` within a date range (`createdAt >= startOfDay` etc.) and reducing in-memory. Acceptable at this scale (single cafe, low order volume). Can be revisited with scheduled Cloud Functions if volume grows.
@@ -87,5 +111,7 @@ No separate "daily summary" collection for v1 — owner app computes today/week/
 ### 7. Firestore Security Rules (Summary)
 - `menu`: read → any authenticated session; write → `role == owner` only.
 - `orders`: read → any authenticated session; create → `role == worker` or `owner`; update/delete → `role == owner` only (e.g. correcting a mistake).
+- `customers`: read → any authenticated session; create requires a non-empty name and a zero opening balance; update is open (balance moves by `increment`, whose result the rules cannot inspect); **delete is denied** — a settled customer is history.
+- `customerPayments`: read → any authenticated session; create validates amount and worker; **update and delete are denied** — a receipt that can be edited is not an audit trail.
 - `expenses`: read → any authenticated session; create → `workerId` must reference a real, active worker/owner, and `amount`/`name` are validated in the rules themselves, because bad values here would not fail loudly — they would just make the books wrong.
 - `users`: no direct client read/write of `pinHash` field exposed to app logic beyond initial auth check (handled via a controlled query, e.g. a Cloud Function or restricted read pattern) — to be finalized in engineering phase for hardened PIN validation.

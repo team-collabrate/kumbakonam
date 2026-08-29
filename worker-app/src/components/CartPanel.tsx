@@ -19,6 +19,7 @@ const STRINGS = {
   subtotal: { en: "Subtotal", ta: "கூட்டுத்தொகை" },
   total: { en: "Total", ta: "மொத்தம்" },
   gpay: { en: "GPay", ta: "GPay" },
+  onAccount: { en: "On account", ta: "கடன்" },
   cash: { en: "Cash", ta: "ரொக்கம்" },
   saving: { en: "Saving…", ta: "சேமிக்கிறது…" },
   printBill: { en: "Print Bill", ta: "பில் அச்சிடு" },
@@ -101,6 +102,12 @@ export function CartPanel({
             <dt>{STRINGS.total[language]}</dt>
             <dd>{formatCurrency(cart.total)}</dd>
           </div>
+          {cart.paymentMethod === "credit" && cart.creditCustomer && (
+            <div className="cart-panel__split-row">
+              <dt>{STRINGS.onAccount[language]}</dt>
+              <dd>{cart.creditCustomer.name}</dd>
+            </div>
+          )}
           {cart.paymentMethod === "split" && (
             <>
               <div className="cart-panel__split-row">

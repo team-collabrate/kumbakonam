@@ -17,7 +17,7 @@ const DIGIT_TO_INDEX: Record<string, number> = {
   "0": 9,
 };
 
-const PAYMENT_KEYS: Record<string, PaymentMethod> = { c: "cash", u: "upi", s: "split" };
+const PAYMENT_KEYS: Record<string, PaymentMethod> = { c: "cash", u: "upi", s: "split", k: "credit" };
 
 const TYPING_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
@@ -32,6 +32,7 @@ export interface UseKeyboardShortcutsOptions {
   onRequestClearCart: () => void;
   onOpenPrinterSetup: () => void;
   onOpenExpenses: () => void;
+  onOpenKhata: () => void;
 }
 
 /**
@@ -44,11 +45,12 @@ export interface UseKeyboardShortcutsOptions {
  * Key map:
  *   1-9, 0   add the Nth visible menu item (see the badge on each card)
  *   ← / →    switch category tab
- *   C/U/S    select Cash / UPI / Split (S opens the split dialog)
+ *   C/U/S/K  select Cash / UPI / Split / Credit (S and K open a dialog)
  *   Enter    submit the order (Print Bill)
  *   ⌫/Del    clear cart (opens the same confirm dialog as the button)
  *   P        open printer setup
  *   E        record spending
+ *   B        open the credit book
  *   L        toggle English/Tamil
  */
 export function useKeyboardShortcuts({
@@ -60,6 +62,7 @@ export function useKeyboardShortcuts({
   onRequestClearCart,
   onOpenPrinterSetup,
   onOpenExpenses,
+  onOpenKhata,
 }: UseKeyboardShortcutsOptions): void {
   const { toggleLanguage } = useLanguage();
 
@@ -115,6 +118,12 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      if (lower === "b") {
+        e.preventDefault();
+        onOpenKhata();
+        return;
+      }
+
       if (e.key === "Enter") {
         if (!orderSubmit.submitting && !cart.isEmpty && cart.paymentMethod) {
           e.preventDefault();
@@ -142,6 +151,7 @@ export function useKeyboardShortcuts({
     onRequestClearCart,
     onOpenPrinterSetup,
     onOpenExpenses,
+    onOpenKhata,
     toggleLanguage,
   ]);
 }

@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import {
+  findOrCreateCustomer,
   SyncStatusBadge,
   useOnlineStatus,
   type PaymentMethod,
@@ -14,12 +15,15 @@ import { PrinterSetupModal } from "../components/PrinterSetupModal";
 import { BillView } from "../components/BillView";
 import { SplitPaymentModal } from "../components/SplitPaymentModal";
 import { ExpenseModal } from "../components/ExpenseModal";
+import { CreditCustomerModal } from "../components/CreditCustomerModal";
+import { KhataModal } from "../components/KhataModal";
 import { useMenu } from "../hooks/useMenu";
 import { useMenuCategories } from "../hooks/useMenuCategories";
 import { useCart } from "../hooks/useCart";
 import { useOrderSubmit } from "../hooks/useOrderSubmit";
 import { usePrinter } from "../hooks/usePrinter";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { useOutstandingCustomers } from "../hooks/useOutstandingCustomers";
 import type { BillInput } from "../printing/receipt";
 import { renderReceiptCanvas } from "../printing/receiptCanvas";
 import { buildRasterReceipt } from "../printing/escposRaster";
@@ -41,6 +45,9 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
+  const [creditOpen, setCreditOpen] = useState(false);
+  const [khataOpen, setKhataOpen] = useState(false);
+  const outstanding = useOutstandingCustomers();
 
   const handleOrderSaved = useCallback(
     async (bill: BillInput) => {
@@ -73,6 +80,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
 
   const openPrinterSetup = useCallback(() => setPrinterSetupOpen(true), []);
   const openExpenses = useCallback(() => setExpensesOpen(true), []);
+  const openKhata = useCallback(() => setKhataOpen(true), []);
 
   // Choosing Split is only half the decision — the amounts still have to be
   // entered, so the dialog opens straight away whether the method came from
@@ -81,9 +89,41 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
     (method: PaymentMethod) => {
       cart.setPaymentMethod(method);
       if (method === "split") setSplitOpen(true);
+      if (method === "credit") setCreditOpen(true);
     },
     [cart],
   );
+
+  // A name typed for the first time becomes a customer record here, so the
+  // same person is matched rather than duplicated on their next order.
+  const chooseCreditCustomer = useCallback(
+    async (choice: { customer?: { customerId: string; name: string }; name?: string }) => {
+      if (choice.customer) {
+        cart.setCreditCustomer({ customerId: choice.customer.customerId, name: choice.customer.name });
+        setCreditOpen(false);
+        return;
+      }
+      if (!choice.name) return;
+      try {
+        const { customerId } = await findOrCreateCustomer(choice.name);
+        cart.setCreditCustomer({ customerId, name: choice.name.trim() });
+        setCreditOpen(false);
+      } catch (err) {
+        // Looking up an existing customer needs the network. Rather than
+        // invent a duplicate record offline, back out of credit entirely so
+        // the worker picks a method that can't lose the debt.
+        console.error("Could not open a credit account", err);
+        setCreditOpen(false);
+        cart.setPaymentMethod(null);
+      }
+    },
+    [cart],
+  );
+
+  const cancelCredit = useCallback(() => {
+    setCreditOpen(false);
+    if (!cart.creditCustomer) cart.setPaymentMethod(null);
+  }, [cart]);
 
   const cancelSplit = useCallback(() => {
     setSplitOpen(false);
@@ -100,11 +140,12 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
     onRequestClearCart: () => setConfirmingClear(true),
     onOpenPrinterSetup: openPrinterSetup,
     onOpenExpenses: openExpenses,
+    onOpenKhata: openKhata,
   });
 
   return (
     <div className="worker-home" data-theme="dark">
-      <Sidebar onOpenExpenses={openExpenses} onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
+      <Sidebar onOpenKhata={openKhata} onOpenExpenses={openExpenses} onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
 
       <div className="worker-home__menu">
         {/* Logo, category tabs, sync badge — one row. The app name, the
@@ -159,6 +200,25 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           onUpiAmountChange={cart.setSplitUpiAmount}
           onConfirm={() => setSplitOpen(false)}
           onCancel={cancelSplit}
+        />
+      )}
+
+      {creditOpen && (
+        <CreditCustomerModal
+          total={cart.total}
+          customers={outstanding.customers}
+          loading={outstanding.loading}
+          onChoose={chooseCreditCustomer}
+          onCancel={cancelCredit}
+        />
+      )}
+
+      {khataOpen && (
+        <KhataModal
+          customers={outstanding.customers}
+          loading={outstanding.loading}
+          workerId={sessionUser.userId}
+          onClose={() => setKhataOpen(false)}
         />
       )}
 

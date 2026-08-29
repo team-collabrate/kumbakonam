@@ -25,6 +25,9 @@ export interface BillInput {
   paymentMethod: PaymentMethod;
   /** Payment method in the receipt's own language (receipts always print Tamil). */
   paymentLabel: string;
+  /** Credit bills only: who the bill is on account for, printed under the
+   *  payment line. A credit slip with no name on it records nothing. */
+  customerName?: string;
   /** Split bills only: the two figures, printed on their own line beneath the
    *  payment line. It gets a line to itself because the payment line already
    *  has the worker's name right-aligned on it, and a long name or a
@@ -38,6 +41,7 @@ const PAYMENT_LABEL_TA: Record<PaymentMethod, string> = {
   cash: "பணம்",
   upi: "UPI",
   split: "பிரித்து",
+  credit: "கடன்",
   card: "கார்டு", // legacy: never selectable now, kept so old bills still label
 };
 

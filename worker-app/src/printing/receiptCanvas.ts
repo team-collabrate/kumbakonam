@@ -351,6 +351,16 @@ function paint(
     ctx.fillText(bill.workerName, col.amountRight, y);
   });
 
+  // A credit slip has to name who it is on account for.
+  if (bill.customerName) {
+    y += 28;
+    const nameY = y;
+    draw(() => {
+      ctx.textAlign = "left";
+      ctx.fillText(`  ${bill.customerName}`, CONTENT_LEFT, nameY);
+    });
+  }
+
   // Split bills get the two figures on their own line — the row above is
   // already shared with the right-aligned worker name.
   if (bill.paymentBreakdown) {

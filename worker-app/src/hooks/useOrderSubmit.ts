@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createOrder, useLanguage, watchOrderSyncStatus, type OrderItem } from "@kumbakonam/shared";
+import {
+  adjustCustomerBalance,
+  createOrder,
+  useLanguage,
+  watchOrderSyncStatus,
+  type OrderItem,
+} from "@kumbakonam/shared";
 import type { UseCartResult } from "./useCart";
 import {
   billNoFromOrderId,
@@ -22,6 +28,7 @@ const SUCCESS_MESSAGE_MS = 3000;
 const MESSAGES = {
   needItem: { en: "Add at least one item first.", ta: "முதலில் ஒரு பொருளையாவது சேர்க்கவும்." },
   needPayment: { en: "Select a payment method.", ta: "பணம் செலுத்தும் முறையைத் தேர்ந்தெடுக்கவும்." },
+  needCustomer: { en: "Choose who this credit bill is for.", ta: "இந்த கடன் பில் யாருக்கு என்று தேர்ந்தெடுக்கவும்." },
   saveFailed: { en: "Could not save the order. Please try again.", ta: "ஆர்டரை சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்." },
   saved: { en: "Order saved.", ta: "ஆர்டர் சேமிக்கப்பட்டது." },
 };
@@ -52,6 +59,11 @@ export function useOrderSubmit(
       setError(MESSAGES.needPayment[language]);
       return;
     }
+    // A credit bill with nobody attached is an unrecoverable debt.
+    if (cart.paymentMethod === "credit" && !cart.creditCustomer) {
+      setError(MESSAGES.needCustomer[language]);
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -68,6 +80,7 @@ export function useOrderSubmit(
       }));
 
       const isSplit = cart.paymentMethod === "split";
+      const credit = cart.paymentMethod === "credit" ? cart.creditCustomer : null;
 
       const { orderId } = await createOrder({
         items,
@@ -80,8 +93,18 @@ export function useOrderSubmit(
         // Only written for a split bill; Firestore rejects undefined, so the
         // keys have to be absent rather than set to undefined.
         ...(isSplit ? { cashAmount: cart.splitCashAmount, upiAmount: cart.splitUpiAmount } : {}),
+        ...(credit ? { customerId: credit.customerId, customerName: credit.name } : {}),
         workerId,
       });
+
+      if (credit) {
+        // Deliberately not awaited, and separate from the order write: an
+        // increment is applied server-side and survives being queued offline,
+        // so the balance still lands even if this is written mid-outage.
+        adjustCustomerBalance(credit.customerId, cart.total).catch((err) => {
+          console.error("Customer balance update failed", err);
+        });
+      }
 
       setPendingOrderIds((ids) => [...ids, orderId]);
       const unsubscribe = watchOrderSyncStatus(
@@ -115,6 +138,7 @@ export function useOrderSubmit(
         total: cart.total,
         paymentMethod: cart.paymentMethod,
         paymentLabel: paymentLabelForReceipt(cart.paymentMethod),
+        ...(credit ? { customerName: credit.name } : {}),
         ...(isSplit
           ? {
               paymentBreakdown: splitBreakdownForReceipt({

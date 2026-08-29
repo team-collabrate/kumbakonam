@@ -95,6 +95,37 @@ service cloud.firestore {
     // Amount is checked here as well as in the UI. This collection feeds
     // spend reporting, and a negative or non-numeric amount would not fail
     // loudly — it would quietly make the books wrong.
+    // customers — regulars buying on credit. Read is any signed-in session:
+    // the till needs the list of who owes, the owner needs the history.
+    //
+    // Balance is deliberately NOT validated here. It moves by increment()
+    // and the rules cannot see the resulting value, only the sentinel, so
+    // there is nothing meaningful to assert — the audit trail in
+    // customerPayments is what makes a wrong balance recoverable.
+    match /customers/{customerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.balance == 0;
+      allow update: if isSignedIn();
+      allow delete: if false; // settled customers stay as history, never deleted
+    }
+
+    // customerPayments — money taken against a balance. Append-only by
+    // design: a receipt that can be edited or removed is not an audit trail,
+    // and this is the record that settles a dispute over what was paid.
+    match /customerPayments/{paymentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner'])
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.customerId is string;
+      allow update, delete: if false;
+    }
+
     match /expenses/{expenseId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()

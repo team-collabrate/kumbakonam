@@ -26,6 +26,9 @@ export interface UseCartResult {
   setSplitUpiAmount: (value: number) => void;
   /** Derived: total - splitUpiAmount. Never set directly. */
   splitCashAmount: number;
+  /** Who a credit bill is on account for. Null for every other method. */
+  creditCustomer: { customerId: string; name: string } | null;
+  setCreditCustomer: (customer: { customerId: string; name: string } | null) => void;
   subtotal: number;
   total: number;
   clearCart: () => void;
@@ -36,6 +39,7 @@ export function useCart(): UseCartResult {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
   const [splitUpiInput, setSplitUpiInput] = useState(0);
+  const [creditCustomer, setCreditCustomer] = useState<{ customerId: string; name: string } | null>(null);
 
   const addItem = useCallback((item: MenuItem) => {
     setLines((prev) => {
@@ -75,6 +79,7 @@ export function useCart(): UseCartResult {
     setLines([]);
     setPaymentMethod(null);
     setSplitUpiInput(0);
+    setCreditCustomer(null);
   }, []);
 
   const subtotal = useMemo(() => lines.reduce((sum, l) => sum + l.price * l.qty, 0), [lines]);
@@ -102,6 +107,8 @@ export function useCart(): UseCartResult {
     splitUpiAmount,
     setSplitUpiAmount,
     splitCashAmount,
+    creditCustomer,
+    setCreditCustomer,
     subtotal,
     total,
     clearCart,

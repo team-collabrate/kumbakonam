@@ -32,6 +32,8 @@ A lightweight Progressive Web App (PWA) POS system for Kumbakonam Cafe, consisti
 - Cart: adjust quantity, add item note, remove item.
 - Select payment method: Cash / UPI / Split (manual tag only). Split divides one bill between cash and GPay; entering either amount fills in the other.
 - No discounts — the cafe does not give them, and the till offers no way to apply one.
+- Record spending from the till (vegetables, milk, gas) — name and amount.
+- Bulk/regular customers on credit: mark a bill "on account" against a named customer, and take payment against their balance later. The counter only lists customers who currently owe.
 - Print bill via USB thermal printer (ESC/POS).
 - Order saved to database (works offline, syncs when back online).
 
