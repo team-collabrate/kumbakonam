@@ -17,6 +17,25 @@ const INK_THRESHOLD = 160;
  *  time; banding keeps each command well inside that. */
 const BAND_ROWS = 128;
 
+/**
+ * A run of blank rows at least this tall is fed past instead of transmitted.
+ *
+ * Roughly a quarter of a receipt is blank paper — the gaps between sections,
+ * the space around the logo — and as raster every one of those rows still
+ * costs 72 bytes and its share of a BLE round trip. Feeding instead sends
+ * three bytes for the whole run.
+ *
+ * The threshold keeps short gaps in the raster. Below it the three-byte
+ * command stops paying for itself, and every feed is a place where the
+ * layout depends on the printer's paper step rather than on our own bitmap —
+ * so this stays high enough that a bill uses a handful of feeds, not dozens.
+ * Measured on a real bill: 10 catches 7 runs and about 8 KB.
+ */
+const MIN_FEED_ROWS = 10;
+
+/** ESC J takes a single byte, so longer feeds go out as repeats. */
+const MAX_FEED_UNITS = 255;
+
 function concat(chunks: Uint8Array[]): Uint8Array {
   const total = chunks.reduce((sum, c) => sum + c.length, 0);
   const out = new Uint8Array(total);
@@ -29,7 +48,12 @@ function concat(chunks: Uint8Array[]): Uint8Array {
 }
 
 /** Packs the canvas into 1 bit per dot, MSB-first, which is the layout GS v 0 expects. */
-function packRaster(canvas: HTMLCanvasElement): { data: Uint8Array; widthBytes: number; height: number } {
+function packRaster(canvas: HTMLCanvasElement): {
+  data: Uint8Array;
+  widthBytes: number;
+  height: number;
+  rowHasInk: boolean[];
+} {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context unavailable");
 
@@ -37,6 +61,7 @@ function packRaster(canvas: HTMLCanvasElement): { data: Uint8Array; widthBytes: 
   const { data: pixels } = ctx.getImageData(0, 0, width, height);
   const widthBytes = Math.ceil(width / 8);
   const data = new Uint8Array(widthBytes * height);
+  const rowHasInk: boolean[] = new Array(height).fill(false);
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -49,11 +74,12 @@ function packRaster(canvas: HTMLCanvasElement): { data: Uint8Array; widthBytes: 
           : 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
       if (luminance < INK_THRESHOLD) {
         data[y * widthBytes + (x >> 3)] |= 0x80 >> (x & 7);
+        rowHasInk[y] = true;
       }
     }
   }
 
-  return { data, widthBytes, height };
+  return { data, widthBytes, height, rowHasInk };
 }
 
 export interface RasterReceiptOptions {
@@ -67,15 +93,20 @@ export function buildRasterReceipt(
   options: RasterReceiptOptions = {},
 ): Uint8Array {
   const { cut = true } = options;
-  const { data, widthBytes, height } = packRaster(canvas);
+  const { data, widthBytes, height, rowHasInk } = packRaster(canvas);
 
   const chunks: Uint8Array[] = [
     new Uint8Array([ESC, 0x40]), // initialise
+    // Pin the motion units to 1/203 inch so ESC J below feeds exact dot rows.
+    // Without this the feed height depends on the printer's default vertical
+    // unit, and a blank gap could come out taller or shorter than the bitmap
+    // it replaced. Printers that ignore GS P are already 1/203 on a 203dpi
+    // head, so this is belt and braces rather than a new dependency.
+    new Uint8Array([GS, 0x50, 203, 203]),
     new Uint8Array([ESC, 0x61, 0x01]), // centre the image block
   ];
 
-  for (let row = 0; row < height; row += BAND_ROWS) {
-    const rows = Math.min(BAND_ROWS, height - row);
+  const raster = (from: number, rows: number) => {
     chunks.push(
       new Uint8Array([
         GS,
@@ -88,8 +119,43 @@ export function buildRasterReceipt(
         (rows >> 8) & 0xff,
       ]),
     );
-    chunks.push(data.subarray(row * widthBytes, (row + rows) * widthBytes));
+    chunks.push(data.subarray(from * widthBytes, (from + rows) * widthBytes));
+  };
+
+  /** Emits rows [from, to) as raster, split into bands the printer can hold. */
+  const rasterRange = (from: number, to: number) => {
+    for (let row = from; row < to; row += BAND_ROWS) {
+      raster(row, Math.min(BAND_ROWS, to - row));
+    }
+  };
+
+  const feed = (rows: number) => {
+    let left = rows;
+    while (left > 0) {
+      const n = Math.min(left, MAX_FEED_UNITS);
+      chunks.push(new Uint8Array([ESC, 0x4a, n])); // ESC J: feed n motion units
+      left -= n;
+    }
+  };
+
+  // Walk the page, transmitting inked stretches and feeding past tall blanks.
+  let cursor = 0;
+  let run = 0;
+  for (let row = 0; row <= height; row++) {
+    const blank = row < height && !rowHasInk[row];
+    if (blank) {
+      run++;
+      continue;
+    }
+    if (run >= MIN_FEED_ROWS) {
+      const blankStart = row - run;
+      rasterRange(cursor, blankStart);
+      feed(run);
+      cursor = row;
+    }
+    run = 0;
   }
+  rasterRange(cursor, height);
 
   chunks.push(new Uint8Array([ESC, 0x61, 0x00])); // back to left align
   if (cut) {
