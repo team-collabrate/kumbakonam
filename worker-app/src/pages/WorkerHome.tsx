@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import {
   SyncStatusBadge,
-  useLanguage,
   useOnlineStatus,
   type PaymentMethod,
   type SessionUser,
@@ -24,18 +23,12 @@ import { renderReceiptCanvas } from "../printing/receiptCanvas";
 import { buildRasterReceipt } from "../printing/escposRaster";
 import "./WorkerHome.css";
 
-const SHORTCUTS_HINT = {
-  en: "⌨ 1–9, 0 add item · ←→ category · C/U/S payment · ↵ print bill · ⌫ clear cart · P printer · L language",
-  ta: "⌨ 1–9, 0 பொருள் சேர் · ←→ பிரிவு · C/U/S பணம் செலுத்தும் முறை · ↵ பில் அச்சிடு · ⌫ கார்ட் காலி · P பிரிண்டர் · L மொழி",
-};
-
 export interface WorkerHomeProps {
   sessionUser: SessionUser;
   onLogout: () => void;
 }
 
 export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
-  const { language } = useLanguage();
   const { items, loading, error: menuError } = useMenu();
   const { categories, activeCategory, setActiveCategory, cycleCategory, visibleItems } = useMenuCategories(items);
   const cart = useCart();
@@ -109,26 +102,24 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
       <Sidebar onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
 
       <div className="worker-home__menu">
+        {/* Logo only. The app name, the signed-in worker and the shortcut
+            crib all came off — staff know where they work and which keys
+            they use, and the row they occupied is worth more as menu. The
+            sync badge stays: it is the only place the counter learns an
+            order hasn't reached the server yet. */}
         <div className="worker-home__menu-header">
-          <div className="worker-home__brand">
-            <img
-              className="worker-home__logo"
-              src="/logo.png"
-              alt=""
-              width={52}
-              height={47}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-            <div>
-              <p className="worker-home__eyebrow">Kumbakonam POS</p>
-              <h1 className="worker-home__title">{sessionUser.name}</h1>
-            </div>
-          </div>
+          <img
+            className="worker-home__logo"
+            src="/logo.png"
+            alt="Kumbakonam Cafe"
+            width={120}
+            height={108}
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
           <SyncStatusBadge status={syncStatus} />
         </div>
-        <p className="worker-home__shortcuts-hint">{SHORTCUTS_HINT[language]}</p>
         <MenuGrid
           categories={categories}
           activeCategory={activeCategory}

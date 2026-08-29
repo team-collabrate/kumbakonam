@@ -22,57 +22,26 @@
   min-height: 0;
 }
 
+/* Just the logo and the sync badge now. Centred rather than top-aligned,
+   because with the text block gone there are only two items of very
+   different heights sitting on this row. */
 .worker-home__menu-header {
   flex: none;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5) var(--space-5) var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
 }
 
-.worker-home__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-/* Small enough that the wordmark inside the emblem won't be legible — it
-   reads as a mark here, with "Kumbakonam POS" beside it doing the naming. */
+/* Now the only branding on the screen, so it carries the wordmark itself
+   rather than sitting beside a text title. 120px against a 256px asset
+   still leaves better than 2x for a high-density tablet panel. */
 .worker-home__logo {
   flex: none;
-  width: 52px;
+  width: 120px;
   height: auto;
-  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.35));
-}
-
-.worker-home__eyebrow {
-  margin: 0;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  /* Small caps text needs positive tracking to stay legible. */
-  letter-spacing: 0.07em;
-}
-
-.worker-home__title {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-title-1);
-  font-weight: 700;
-  line-height: var(--leading-title);
-  letter-spacing: var(--tracking-title);
-}
-
-.worker-home__shortcuts-hint {
-  flex: none;
-  margin: 0 var(--space-5) var(--space-2);
-  font-size: var(--text-caption);
-  line-height: 1.4;
-  color: var(--color-text-muted);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-  letter-spacing: 0;
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 0.4));
 }
 
 @media (max-width: 900px) {
@@ -85,10 +54,5 @@
 
   .worker-home__cart {
     height: 60vh;
-  }
-
-  /* No physical keyboard on a phone/tablet touch layout — the hint is just clutter here. */
-  .worker-home__shortcuts-hint {
-    display: none;
   }
 }
