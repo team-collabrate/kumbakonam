@@ -149,3 +149,11 @@
   box-shadow: none;
   cursor: not-allowed;
 }
+
+/* Split breakdown, shown under the total once Split is the payment method.
+   Indented and lighter than the total so it reads as a note about how the
+   total is being settled, not as another amount owed. */
+.cart-panel__split-row {
+  font-size: var(--text-footnote) !important;
+  padding-left: var(--space-3);
+}

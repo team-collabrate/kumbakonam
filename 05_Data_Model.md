@@ -39,9 +39,11 @@ Stores login PINs (hashed) and roles.
 | `orderId` (doc id) | string | Auto-generated |
 | `items` | array of objects | See below |
 | `subtotal` | number | Sum before discount |
-| `discount` | number | Flat ₹ amount (0 if none) |
+| `discount` | number | Flat ₹ amount. Always 0 from 2026-08-29 — the cafe gives no discounts and the till no longer offers one. Retained because earlier orders carry real values. |
 | `total` | number | subtotal - discount |
-| `paymentMethod` | string enum | `cash` \| `upi` \| `card` |
+| `paymentMethod` | string enum | `cash` \| `upi` \| `split`. `card` is legacy: no longer selectable, but present on orders taken before the change, so readers must still handle it. |
+| `cashAmount` | number, optional | Cash half of a `split` bill. Absent otherwise. |
+| `upiAmount` | number, optional | GPay/UPI half of a `split` bill. Absent otherwise. |
 | `workerId` | string | Reference to `users` doc who created it |
 | `createdAt` | timestamp | Server timestamp |
 | `syncedAt` | timestamp \| null | Set when confirmed written (useful for offline queue visibility) |

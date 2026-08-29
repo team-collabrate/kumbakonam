@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createOrder, useLanguage, watchOrderSyncStatus, type OrderItem } from "@kumbakonam/shared";
 import type { UseCartResult } from "./useCart";
-import { billNoFromOrderId, paymentLabelForReceipt, type BillInput } from "../printing/receipt";
+import {
+  billNoFromOrderId,
+  paymentLabelForReceipt,
+  splitBreakdownForReceipt,
+  type BillInput,
+} from "../printing/receipt";
 
 export interface UseOrderSubmitResult {
   submit: () => Promise<void>;
@@ -62,12 +67,19 @@ export function useOrderSubmit(
         ...(l.note.trim() ? { note: l.note.trim() } : {}),
       }));
 
+      const isSplit = cart.paymentMethod === "split";
+
       const { orderId } = await createOrder({
         items,
         subtotal: cart.subtotal,
-        discount: cart.discountAmount,
+        // The cafe gives no discounts. The field stays on the document so
+        // older orders that do carry one remain comparable.
+        discount: 0,
         total: cart.total,
         paymentMethod: cart.paymentMethod,
+        // Only written for a split bill; Firestore rejects undefined, so the
+        // keys have to be absent rather than set to undefined.
+        ...(isSplit ? { cashAmount: cart.splitCashAmount, upiAmount: cart.splitUpiAmount } : {}),
         workerId,
       });
 
@@ -100,10 +112,17 @@ export function useOrderSubmit(
           note: l.note.trim() || undefined,
         })),
         subtotal: cart.subtotal,
-        discount: cart.discountAmount,
         total: cart.total,
         paymentMethod: cart.paymentMethod,
         paymentLabel: paymentLabelForReceipt(cart.paymentMethod),
+        ...(isSplit
+          ? {
+              paymentBreakdown: splitBreakdownForReceipt({
+                cash: cart.splitCashAmount,
+                upi: cart.splitUpiAmount,
+              }),
+            }
+          : {}),
         workerName,
         createdAt: new Date(),
       });

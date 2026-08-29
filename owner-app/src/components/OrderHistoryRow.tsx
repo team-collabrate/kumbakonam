@@ -2,9 +2,13 @@ import { useState } from "react";
 import { formatCurrency, translateItemName, useLanguage, type Language, type Order } from "@kumbakonam/shared";
 import "./OrderHistoryRow.css";
 
+/** Exhaustive over PaymentMethod on purpose: "card" is no longer offered at
+ *  the till, but orders taken before the change still carry it and must not
+ *  render a blank label here. */
 const PAYMENT_LABEL: Record<Order["paymentMethod"], Record<Language, string>> = {
   cash: { en: "Cash", ta: "பணம்" },
   upi: { en: "UPI", ta: "UPI" },
+  split: { en: "Split", ta: "பிரித்து" },
   card: { en: "Card", ta: "கார்டு" },
 };
 
@@ -13,6 +17,8 @@ const STRINGS = {
   items: { en: "items", ta: "பொருட்கள்" },
   note: { en: "note", ta: "குறிப்பு" },
   discount: { en: "Discount", ta: "தள்ளுபடி" },
+  gpay: { en: "GPay", ta: "GPay" },
+  cash: { en: "Cash", ta: "ரொக்கம்" },
 };
 
 export interface OrderHistoryRowProps {
@@ -62,10 +68,23 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
               </li>
             ))}
           </ul>
+          {/* Only orders taken before discounts were dropped carry one. */}
           {order.discount > 0 && (
             <div className="order-row__discount-line">
               <span>{STRINGS.discount[language]}</span>
               <span>−{formatCurrency(order.discount)}</span>
+            </div>
+          )}
+          {order.paymentMethod === "split" && (
+            <div className="order-row__split">
+              <div className="order-row__split-line">
+                <span>{STRINGS.gpay[language]}</span>
+                <span>{formatCurrency(order.upiAmount ?? 0)}</span>
+              </div>
+              <div className="order-row__split-line">
+                <span>{STRINGS.cash[language]}</span>
+                <span>{formatCurrency(order.cashAmount ?? 0)}</span>
+              </div>
             </div>
           )}
         </div>

@@ -1,10 +1,18 @@
 import { useCallback, useState } from "react";
-import { SyncStatusBadge, useLanguage, useOnlineStatus, type SessionUser, type SyncStatus } from "@kumbakonam/shared";
+import {
+  SyncStatusBadge,
+  useLanguage,
+  useOnlineStatus,
+  type PaymentMethod,
+  type SessionUser,
+  type SyncStatus,
+} from "@kumbakonam/shared";
 import { Sidebar } from "../components/Sidebar";
 import { MenuGrid } from "../components/MenuGrid";
 import { CartPanel } from "../components/CartPanel";
 import { PrinterSetupModal } from "../components/PrinterSetupModal";
 import { BillView } from "../components/BillView";
+import { SplitPaymentModal } from "../components/SplitPaymentModal";
 import { useMenu } from "../hooks/useMenu";
 import { useMenuCategories } from "../hooks/useMenuCategories";
 import { useCart } from "../hooks/useCart";
@@ -17,8 +25,8 @@ import { buildRasterReceipt } from "../printing/escposRaster";
 import "./WorkerHome.css";
 
 const SHORTCUTS_HINT = {
-  en: "⌨ 1–9, 0 add item · ←→ category · C/U/K payment · ↵ print bill · ⌫ clear cart · P printer · L language",
-  ta: "⌨ 1–9, 0 பொருள் சேர் · ←→ பிரிவு · C/U/K பணம் செலுத்தும் முறை · ↵ பில் அச்சிடு · ⌫ கார்ட் காலி · P பிரிண்டர் · L மொழி",
+  en: "⌨ 1–9, 0 add item · ←→ category · C/U/S payment · ↵ print bill · ⌫ clear cart · P printer · L language",
+  ta: "⌨ 1–9, 0 பொருள் சேர் · ←→ பிரிவு · C/U/S பணம் செலுத்தும் முறை · ↵ பில் அச்சிடு · ⌫ கார்ட் காலி · P பிரிண்டர் · L மொழி",
 };
 
 export interface WorkerHomeProps {
@@ -36,6 +44,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const [printerSetupOpen, setPrinterSetupOpen] = useState(false);
   const [billToShow, setBillToShow] = useState<BillInput | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
 
   const handleOrderSaved = useCallback(
     async (bill: BillInput) => {
@@ -68,10 +77,28 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
 
   const openPrinterSetup = useCallback(() => setPrinterSetupOpen(true), []);
 
+  // Choosing Split is only half the decision — the amounts still have to be
+  // entered, so the dialog opens straight away whether the method came from
+  // the button or the S key.
+  const selectPayment = useCallback(
+    (method: PaymentMethod) => {
+      cart.setPaymentMethod(method);
+      if (method === "split") setSplitOpen(true);
+    },
+    [cart],
+  );
+
+  const cancelSplit = useCallback(() => {
+    setSplitOpen(false);
+    // Backing out of the amounts means no method was really chosen.
+    cart.setPaymentMethod(null);
+  }, [cart]);
+
   useKeyboardShortcuts({
     visibleItems,
     cart,
     orderSubmit,
+    onSelectPayment: selectPayment,
     onCycleCategory: cycleCategory,
     onRequestClearCart: () => setConfirmingClear(true),
     onOpenPrinterSetup: openPrinterSetup,
@@ -121,8 +148,20 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           confirmingClear={confirmingClear}
           onRequestClear={() => setConfirmingClear(true)}
           onCancelClear={() => setConfirmingClear(false)}
+          onSelectPayment={selectPayment}
         />
       </div>
+
+      {splitOpen && (
+        <SplitPaymentModal
+          total={cart.total}
+          upiAmount={cart.splitUpiAmount}
+          cashAmount={cart.splitCashAmount}
+          onUpiAmountChange={cart.setSplitUpiAmount}
+          onConfirm={() => setSplitOpen(false)}
+          onCancel={cancelSplit}
+        />
+      )}
 
       {printerSetupOpen && (
         <PrinterSetupModal

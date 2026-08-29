@@ -17,7 +17,7 @@ const DIGIT_TO_INDEX: Record<string, number> = {
   "0": 9,
 };
 
-const PAYMENT_KEYS: Record<string, PaymentMethod> = { c: "cash", u: "upi", k: "card" };
+const PAYMENT_KEYS: Record<string, PaymentMethod> = { c: "cash", u: "upi", s: "split" };
 
 const TYPING_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 
@@ -25,6 +25,9 @@ export interface UseKeyboardShortcutsOptions {
   visibleItems: MenuItem[];
   cart: UseCartResult;
   orderSubmit: UseOrderSubmitResult;
+  /** Routed through WorkerHome rather than set on the cart directly, because
+   *  picking Split also has to open the amounts dialog. */
+  onSelectPayment: (method: PaymentMethod) => void;
   onCycleCategory: (direction: 1 | -1) => void;
   onRequestClearCart: () => void;
   onOpenPrinterSetup: () => void;
@@ -40,7 +43,7 @@ export interface UseKeyboardShortcutsOptions {
  * Key map:
  *   1-9, 0   add the Nth visible menu item (see the badge on each card)
  *   ← / →    switch category tab
- *   C/U/K    select Cash / UPI / Card
+ *   C/U/S    select Cash / UPI / Split (S opens the split dialog)
  *   Enter    submit the order (Print Bill)
  *   ⌫/Del    clear cart (opens the same confirm dialog as the button)
  *   P        open printer setup
@@ -50,6 +53,7 @@ export function useKeyboardShortcuts({
   visibleItems,
   cart,
   orderSubmit,
+  onSelectPayment,
   onCycleCategory,
   onRequestClearCart,
   onOpenPrinterSetup,
@@ -86,7 +90,7 @@ export function useKeyboardShortcuts({
       const lower = e.key.toLowerCase();
       if (lower in PAYMENT_KEYS) {
         e.preventDefault();
-        cart.setPaymentMethod(PAYMENT_KEYS[lower]);
+        onSelectPayment(PAYMENT_KEYS[lower]);
         return;
       }
 
@@ -120,5 +124,14 @@ export function useKeyboardShortcuts({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [visibleItems, cart, orderSubmit, onCycleCategory, onRequestClearCart, onOpenPrinterSetup, toggleLanguage]);
+  }, [
+    visibleItems,
+    cart,
+    orderSubmit,
+    onSelectPayment,
+    onCycleCategory,
+    onRequestClearCart,
+    onOpenPrinterSetup,
+    toggleLanguage,
+  ]);
 }

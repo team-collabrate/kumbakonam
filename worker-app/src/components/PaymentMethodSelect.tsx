@@ -1,11 +1,16 @@
 import { useLanguage, type PaymentMethod } from "@kumbakonam/shared";
 import "./PaymentMethodSelect.css";
 
-/** Key must match PAYMENT_KEYS in hooks/useKeyboardShortcuts.ts. */
+/**
+ * Key must match PAYMENT_KEYS in hooks/useKeyboardShortcuts.ts.
+ *
+ * No card: the cafe doesn't take them. That slot is now Split, for a bill
+ * paid part in cash and part on GPay.
+ */
 const METHODS: Array<{ value: PaymentMethod; label: { en: string; ta: string }; key: string }> = [
   { value: "cash", label: { en: "Cash", ta: "பணம்" }, key: "C" },
   { value: "upi", label: { en: "UPI", ta: "UPI" }, key: "U" },
-  { value: "card", label: { en: "Card", ta: "கார்டு" }, key: "K" },
+  { value: "split", label: { en: "Split", ta: "பிரித்து" }, key: "S" },
 ];
 
 const ARIA_LABEL = { en: "Payment method", ta: "பணம் செலுத்தும் முறை" };

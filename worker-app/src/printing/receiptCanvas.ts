@@ -55,7 +55,6 @@ const L = {
   date: "தேதி",
   billNo: "பில் எண்",
   subtotal: "கூட்டுத்தொகை",
-  discount: "தள்ளுபடி",
   total: "மொத்தம்",
   payment: "பணம்",
   phone: "தொலைபேசி",
@@ -263,16 +262,6 @@ function paint(
     ctx.fillText(money(bill.subtotal), COL_AMOUNT_RIGHT, y);
   });
 
-  if (bill.discount > 0) {
-    y += 32;
-    draw(() => {
-      ctx.textAlign = "left";
-      ctx.fillText(`${L.discount}:`, CONTENT_LEFT, y);
-      ctx.textAlign = "right";
-      ctx.fillText(`-${money(bill.discount)}`, COL_AMOUNT_RIGHT, y);
-    });
-  }
-
   y += 46;
   draw(() => {
     ctx.font = font(40, "bold");
@@ -292,6 +281,17 @@ function paint(
     ctx.textAlign = "right";
     ctx.fillText(bill.workerName, COL_AMOUNT_RIGHT, y);
   });
+
+  // Split bills get the two figures on their own line — the row above is
+  // already shared with the right-aligned worker name.
+  if (bill.paymentBreakdown) {
+    y += 28;
+    const breakdownY = y;
+    draw(() => {
+      ctx.textAlign = "left";
+      ctx.fillText(`  ${bill.paymentBreakdown}`, CONTENT_LEFT, breakdownY);
+    });
+  }
 
   // --- Footer -------------------------------------------------------------
   if (CAFE_DETAILS.thanks) {

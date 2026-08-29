@@ -10,8 +10,6 @@ export interface CartLine {
   note: string;
 }
 
-export type DiscountMode = "flat" | "percent";
-
 export interface UseCartResult {
   lines: CartLine[];
   isEmpty: boolean;
@@ -20,24 +18,24 @@ export interface UseCartResult {
   decrementQty: (itemId: string) => void;
   removeLine: (itemId: string) => void;
   setNote: (itemId: string, note: string) => void;
-  discountMode: DiscountMode;
-  setDiscountMode: (mode: DiscountMode) => void;
-  discountInput: number;
-  setDiscountInput: (value: number) => void;
   paymentMethod: PaymentMethod | null;
-  setPaymentMethod: (method: PaymentMethod) => void;
+  /** Accepts null so cancelling the split dialog can undo the choice. */
+  setPaymentMethod: (method: PaymentMethod | null) => void;
+  /** UPI/GPay share of a split bill. The cash share is whatever is left. */
+  splitUpiAmount: number;
+  setSplitUpiAmount: (value: number) => void;
+  /** Derived: total - splitUpiAmount. Never set directly. */
+  splitCashAmount: number;
   subtotal: number;
-  discountAmount: number;
   total: number;
   clearCart: () => void;
 }
 
-/** Cart state for the order-in-progress — PRD §5.1 (qty/note/remove/discount). */
+/** Cart state for the order-in-progress — PRD §5.1 (qty/note/remove). */
 export function useCart(): UseCartResult {
   const [lines, setLines] = useState<CartLine[]>([]);
-  const [discountMode, setDiscountMode] = useState<DiscountMode>("flat");
-  const [discountInput, setDiscountInputState] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [splitUpiInput, setSplitUpiInput] = useState(0);
 
   const addItem = useCallback((item: MenuItem) => {
     setLines((prev) => {
@@ -69,25 +67,27 @@ export function useCart(): UseCartResult {
     setLines((prev) => prev.map((l) => (l.itemId === itemId ? { ...l, note } : l)));
   }, []);
 
-  const setDiscountInput = useCallback((value: number) => {
-    setDiscountInputState(Number.isFinite(value) && value >= 0 ? value : 0);
+  const setSplitUpiAmount = useCallback((value: number) => {
+    setSplitUpiInput(Number.isFinite(value) && value >= 0 ? value : 0);
   }, []);
 
   const clearCart = useCallback(() => {
     setLines([]);
-    setDiscountMode("flat");
-    setDiscountInputState(0);
     setPaymentMethod(null);
+    setSplitUpiInput(0);
   }, []);
 
   const subtotal = useMemo(() => lines.reduce((sum, l) => sum + l.price * l.qty, 0), [lines]);
 
-  const discountAmount = useMemo(() => {
-    const raw = discountMode === "flat" ? discountInput : Math.round((subtotal * discountInput) / 100);
-    return Math.min(Math.max(raw, 0), subtotal);
-  }, [discountMode, discountInput, subtotal]);
+  // No discount: the cafe doesn't give them, so the total is the subtotal.
+  const total = subtotal;
 
-  const total = subtotal - discountAmount;
+  // Only the UPI side is stored; cash is always the remainder. That is what
+  // makes the two boxes track each other, and it means adding an item after
+  // the split was entered can't leave the two halves disagreeing with the
+  // bill — the cash side simply absorbs the change.
+  const splitUpiAmount = Math.min(Math.max(splitUpiInput, 0), total);
+  const splitCashAmount = total - splitUpiAmount;
 
   return {
     lines,
@@ -97,14 +97,12 @@ export function useCart(): UseCartResult {
     decrementQty,
     removeLine,
     setNote,
-    discountMode,
-    setDiscountMode,
-    discountInput,
-    setDiscountInput,
     paymentMethod,
     setPaymentMethod,
+    splitUpiAmount,
+    setSplitUpiAmount,
+    splitCashAmount,
     subtotal,
-    discountAmount,
     total,
     clearCart,
   };

@@ -26,6 +26,9 @@ export interface CreateOrderInput {
   discount: number;
   total: number;
   paymentMethod: PaymentMethod;
+  /** Both set together, and only when paymentMethod is "split". */
+  cashAmount?: number;
+  upiAmount?: number;
   workerId: string;
 }
 

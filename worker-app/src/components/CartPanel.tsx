@@ -3,7 +3,7 @@ import type { UseCartResult } from "../hooks/useCart";
 import type { UseOrderSubmitResult } from "../hooks/useOrderSubmit";
 import { CartLineItem } from "./CartLineItem";
 import { PaymentMethodSelect } from "./PaymentMethodSelect";
-import { DiscountInput } from "./DiscountInput";
+import type { PaymentMethod } from "@kumbakonam/shared";
 import "./CartPanel.css";
 
 const STRINGS = {
@@ -17,8 +17,9 @@ const STRINGS = {
   clearConfirm: { en: "Clear Cart", ta: "கார்ட்டை காலி செய்" },
   empty: { en: "Tap a menu item to add it to the order.", ta: "ஆர்டரில் சேர்க்க ஒரு மெனு பொருளைத் தட்டவும்." },
   subtotal: { en: "Subtotal", ta: "கூட்டுத்தொகை" },
-  discount: { en: "Discount", ta: "தள்ளுபடி" },
   total: { en: "Total", ta: "மொத்தம்" },
+  gpay: { en: "GPay", ta: "GPay" },
+  cash: { en: "Cash", ta: "ரொக்கம்" },
   saving: { en: "Saving…", ta: "சேமிக்கிறது…" },
   printBill: { en: "Print Bill", ta: "பில் அச்சிடு" },
 };
@@ -30,9 +31,18 @@ export interface CartPanelProps {
   confirmingClear: boolean;
   onRequestClear: () => void;
   onCancelClear: () => void;
+  /** Lifted to WorkerHome so the S shortcut and the button both open the split dialog. */
+  onSelectPayment: (method: PaymentMethod) => void;
 }
 
-export function CartPanel({ cart, orderSubmit, confirmingClear, onRequestClear, onCancelClear }: CartPanelProps) {
+export function CartPanel({
+  cart,
+  orderSubmit,
+  confirmingClear,
+  onRequestClear,
+  onCancelClear,
+  onSelectPayment,
+}: CartPanelProps) {
   const { language } = useLanguage();
 
   return (
@@ -80,30 +90,29 @@ export function CartPanel({ cart, orderSubmit, confirmingClear, onRequestClear, 
       </div>
 
       <div className="cart-panel__footer">
-        <DiscountInput
-          mode={cart.discountMode}
-          onModeChange={cart.setDiscountMode}
-          value={cart.discountInput}
-          onValueChange={cart.setDiscountInput}
-        />
-
-        <PaymentMethodSelect value={cart.paymentMethod} onChange={cart.setPaymentMethod} />
+        <PaymentMethodSelect value={cart.paymentMethod} onChange={onSelectPayment} />
 
         <dl className="cart-panel__totals">
           <div>
             <dt>{STRINGS.subtotal[language]}</dt>
             <dd>{formatCurrency(cart.subtotal)}</dd>
           </div>
-          {cart.discountAmount > 0 && (
-            <div>
-              <dt>{STRINGS.discount[language]}</dt>
-              <dd>−{formatCurrency(cart.discountAmount)}</dd>
-            </div>
-          )}
           <div className="cart-panel__total-row">
             <dt>{STRINGS.total[language]}</dt>
             <dd>{formatCurrency(cart.total)}</dd>
           </div>
+          {cart.paymentMethod === "split" && (
+            <>
+              <div className="cart-panel__split-row">
+                <dt>{STRINGS.gpay[language]}</dt>
+                <dd>{formatCurrency(cart.splitUpiAmount)}</dd>
+              </div>
+              <div className="cart-panel__split-row">
+                <dt>{STRINGS.cash[language]}</dt>
+                <dd>{formatCurrency(cart.splitCashAmount)}</dd>
+              </div>
+            </>
+          )}
         </dl>
 
         <div

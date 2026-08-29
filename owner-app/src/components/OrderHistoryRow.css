@@ -105,3 +105,19 @@
   margin-top: var(--space-1);
   border-top: 1px dashed var(--color-border);
 }
+
+/* How a split bill was actually settled. Same weight as the discount line —
+   it annotates the total rather than adding to it. */
+.order-row__split {
+  padding-top: var(--space-2);
+  margin-top: var(--space-1);
+  border-top: 1px dashed var(--color-border);
+}
+
+.order-row__split-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-footnote);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
