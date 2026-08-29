@@ -39,11 +39,18 @@ const font = (size: number, weight: "normal" | "bold" = "normal") =>
 const LOGO_MAX_W = 320;
 const LOGO_MAX_H = 180;
 
-/** Column x-positions, right-aligned to mirror the reference receipt. */
-const COL_QTY_RIGHT = 366;
-const COL_PRICE_RIGHT = 462;
-const COL_AMOUNT_RIGHT = CONTENT_RIGHT;
-const COL_ITEM_MAX = 300;
+/** Size of the அளவு / விலை / தொகை label row. Smaller than the figures it
+ *  labels: the Tamil words are much wider than the numbers, so every point
+ *  here comes straight out of the item-name column. */
+const HEADER_SIZE = 22;
+
+/** Space between columns, applied identically to all of them — this single
+ *  value is what makes the three labels evenly spaced. */
+const COL_GUTTER = 14;
+
+/** Widest figure each column has to hold. Used as a floor on column width so
+ *  a large bill can't push its amount into the column to its left. */
+const WIDEST = { qty: "99", price: "999.00", amount: "9999.00" } as const;
 
 /** Every label on the paper is Tamil — the receipt is for the customer, so it
  *  reads in one language regardless of the app's current UI language. */
@@ -61,6 +68,50 @@ const L = {
 } as const;
 
 const money = (n: number) => n.toFixed(2);
+
+interface Columns {
+  qtyRight: number;
+  priceRight: number;
+  amountRight: number;
+  itemMax: number;
+}
+
+/**
+ * Works out the table geometry by measuring the text, rather than carrying
+ * hard-coded x-positions.
+ *
+ * The positions used to be constants, and they silently stopped matching the
+ * headers: விலை and தொகை overlapped by 5 dots on the printed bill because
+ * nothing tied the numbers to the words they sat under. Deriving each column
+ * from the wider of its label and its biggest figure, then stepping right to
+ * left with one shared gutter, makes even spacing a property of the layout
+ * instead of something to re-tune by hand whenever a font or a word changes.
+ */
+function deriveColumns(ctx: CanvasRenderingContext2D): Columns {
+  ctx.font = font(HEADER_SIZE, "bold");
+  const headerW = {
+    qty: ctx.measureText(L.qty).width,
+    price: ctx.measureText(L.price).width,
+    amount: ctx.measureText(L.amount).width,
+  };
+
+  ctx.font = font(26);
+  const qtyW = Math.max(headerW.qty, ctx.measureText(WIDEST.qty).width);
+  const priceW = Math.max(headerW.price, ctx.measureText(WIDEST.price).width);
+  const amountW = Math.max(headerW.amount, ctx.measureText(WIDEST.amount).width);
+
+  const amountRight = CONTENT_RIGHT;
+  const priceRight = amountRight - amountW - COL_GUTTER;
+  const qtyRight = priceRight - priceW - COL_GUTTER;
+
+  return {
+    qtyRight,
+    priceRight,
+    amountRight,
+    // Whatever is left after the figures have taken what they need.
+    itemMax: qtyRight - qtyW - COL_GUTTER - CONTENT_LEFT,
+  };
+}
 
 async function loadLogo(): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -102,14 +153,17 @@ function dashedRule(ctx: CanvasRenderingContext2D, y: number) {
   ctx.restore();
 }
 
-function formatDateTime(date: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+function formatDate(date: Date): string {
+  return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
+
+function formatTime(date: Date): string {
   let h = date.getHours();
   const period = h >= 12 ? "PM" : "AM";
   h = h % 12 === 0 ? 12 : h % 12;
-  return `${p(date.getDate())}/${p(date.getMonth() + 1)}/${date.getFullYear()} ${p(h)}:${p(
-    date.getMinutes(),
-  )}:${p(date.getSeconds())} ${period}`;
+  return `${pad2(h)}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())} ${period}`;
 }
 
 export async function renderReceiptCanvas(bill: BillInput): Promise<HTMLCanvasElement> {
@@ -152,6 +206,8 @@ function paint(
     if (!measureOnly) fn();
   };
 
+  const col = deriveColumns(ctx);
+
   let y = PAD;
 
   // --- Logo ---------------------------------------------------------------
@@ -185,26 +241,39 @@ function paint(
 
   // --- Order meta ---------------------------------------------------------
   y += 14;
-  ctx.textAlign = "left";
   ctx.font = font(24);
   y += 26;
-  draw(() => ctx.fillText(`${L.date}: ${formatDateTime(bill.createdAt)}`, CONTENT_LEFT, y));
+  const metaY = y;
+  // Date on the left, clock on the right of the same line — the two together
+  // were one long left-aligned string that left the right half of the paper
+  // empty.
+  draw(() => {
+    ctx.textAlign = "left";
+    ctx.fillText(`${L.date}: ${formatDate(bill.createdAt)}`, CONTENT_LEFT, metaY);
+    ctx.textAlign = "right";
+    ctx.fillText(formatTime(bill.createdAt), CONTENT_RIGHT, metaY);
+  });
   y += 30;
-  draw(() => ctx.fillText(`${L.billNo}: ${bill.billNo}`, CONTENT_LEFT, y));
+  const billNoY = y;
+  draw(() => {
+    ctx.textAlign = "left";
+    ctx.fillText(`${L.billNo}: ${bill.billNo}`, CONTENT_LEFT, billNoY);
+  });
 
   y += 14;
   draw(() => dashedRule(ctx, y));
 
   // --- Column headers -----------------------------------------------------
-  ctx.font = font(24, "bold");
+  ctx.font = font(HEADER_SIZE, "bold");
   y += 30;
+  const headY = y;
   draw(() => {
     ctx.textAlign = "left";
-    ctx.fillText(L.item, CONTENT_LEFT, y);
+    ctx.fillText(L.item, CONTENT_LEFT, headY);
     ctx.textAlign = "right";
-    ctx.fillText(L.qty, COL_QTY_RIGHT, y);
-    ctx.fillText(L.price, COL_PRICE_RIGHT, y);
-    ctx.fillText(L.amount, COL_AMOUNT_RIGHT, y);
+    ctx.fillText(L.qty, col.qtyRight, headY);
+    ctx.fillText(L.price, col.priceRight, headY);
+    ctx.fillText(L.amount, col.amountRight, headY);
   });
 
   y += 12;
@@ -215,7 +284,7 @@ function paint(
   ctx.font = font(26);
   for (const item of bill.items) {
     ctx.textAlign = "left";
-    const lines = wrap(ctx, item.name, COL_ITEM_MAX);
+    const lines = wrap(ctx, item.name, col.itemMax);
     y += 30;
     const firstLineY = y;
     draw(() => ctx.fillText(lines[0], CONTENT_LEFT, firstLineY));
@@ -223,9 +292,9 @@ function paint(
     // Figures sit on the item's first line; extra name lines hang below.
     draw(() => {
       ctx.textAlign = "right";
-      ctx.fillText(String(item.qty), COL_QTY_RIGHT, firstLineY);
-      ctx.fillText(money(item.price), COL_PRICE_RIGHT, firstLineY);
-      ctx.fillText(money(item.price * item.qty), COL_AMOUNT_RIGHT, firstLineY);
+      ctx.fillText(String(item.qty), col.qtyRight, firstLineY);
+      ctx.fillText(money(item.price), col.priceRight, firstLineY);
+      ctx.fillText(money(item.price * item.qty), col.amountRight, firstLineY);
     });
 
     for (const extra of lines.slice(1)) {
@@ -259,7 +328,7 @@ function paint(
     ctx.textAlign = "left";
     ctx.fillText(`${L.subtotal}:`, CONTENT_LEFT, y);
     ctx.textAlign = "right";
-    ctx.fillText(money(bill.subtotal), COL_AMOUNT_RIGHT, y);
+    ctx.fillText(money(bill.subtotal), col.amountRight, y);
   });
 
   y += 46;
@@ -270,7 +339,7 @@ function paint(
     ctx.textAlign = "right";
     // The rupee sign renders from the browser font here — on a raster print
     // there's no codepage to fall foul of.
-    ctx.fillText(`₹ ${money(bill.total)}`, COL_AMOUNT_RIGHT, y);
+    ctx.fillText(`₹ ${money(bill.total)}`, col.amountRight, y);
   });
 
   ctx.font = font(24);
@@ -279,7 +348,7 @@ function paint(
     ctx.textAlign = "left";
     ctx.fillText(`${L.payment}: ${bill.paymentLabel}`, CONTENT_LEFT, y);
     ctx.textAlign = "right";
-    ctx.fillText(bill.workerName, COL_AMOUNT_RIGHT, y);
+    ctx.fillText(bill.workerName, col.amountRight, y);
   });
 
   // Split bills get the two figures on their own line — the row above is
