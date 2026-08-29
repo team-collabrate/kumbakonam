@@ -13,6 +13,7 @@ import { CartPanel } from "../components/CartPanel";
 import { PrinterSetupModal } from "../components/PrinterSetupModal";
 import { BillView } from "../components/BillView";
 import { SplitPaymentModal } from "../components/SplitPaymentModal";
+import { ExpenseModal } from "../components/ExpenseModal";
 import { useMenu } from "../hooks/useMenu";
 import { useMenuCategories } from "../hooks/useMenuCategories";
 import { useCart } from "../hooks/useCart";
@@ -39,6 +40,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const [billToShow, setBillToShow] = useState<BillInput | null>(null);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
+  const [expensesOpen, setExpensesOpen] = useState(false);
 
   const handleOrderSaved = useCallback(
     async (bill: BillInput) => {
@@ -70,6 +72,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   }, [billToShow, printer]);
 
   const openPrinterSetup = useCallback(() => setPrinterSetupOpen(true), []);
+  const openExpenses = useCallback(() => setExpensesOpen(true), []);
 
   // Choosing Split is only half the decision — the amounts still have to be
   // entered, so the dialog opens straight away whether the method came from
@@ -96,11 +99,12 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
     onCycleCategory: cycleCategory,
     onRequestClearCart: () => setConfirmingClear(true),
     onOpenPrinterSetup: openPrinterSetup,
+    onOpenExpenses: openExpenses,
   });
 
   return (
     <div className="worker-home" data-theme="dark">
-      <Sidebar onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
+      <Sidebar onOpenExpenses={openExpenses} onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
 
       <div className="worker-home__menu">
         {/* Logo, category tabs, sync badge — one row. The app name, the
@@ -156,6 +160,10 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           onConfirm={() => setSplitOpen(false)}
           onCancel={cancelSplit}
         />
+      )}
+
+      {expensesOpen && (
+        <ExpenseModal workerId={sessionUser.userId} onClose={() => setExpensesOpen(false)} />
       )}
 
       {printerSetupOpen && (

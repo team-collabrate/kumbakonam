@@ -86,5 +86,25 @@ service cloud.firestore {
         && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner']);
       allow update, delete: if isSignedIn();
     }
+
+    // expenses — money spent from the till. Same shape of protection as
+    // orders: the recorded workerId has to belong to a real, active member
+    // of staff, which is as far as this can be taken without custom auth
+    // claims (see the limitation note above).
+    //
+    // Amount is checked here as well as in the UI. This collection feeds
+    // spend reporting, and a negative or non-numeric amount would not fail
+    // loudly — it would quietly make the books wrong.
+    match /expenses/{expenseId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner'])
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120;
+      allow update, delete: if isSignedIn();
+    }
   }
 }

@@ -31,6 +31,7 @@ export interface UseKeyboardShortcutsOptions {
   onCycleCategory: (direction: 1 | -1) => void;
   onRequestClearCart: () => void;
   onOpenPrinterSetup: () => void;
+  onOpenExpenses: () => void;
 }
 
 /**
@@ -47,6 +48,7 @@ export interface UseKeyboardShortcutsOptions {
  *   Enter    submit the order (Print Bill)
  *   ⌫/Del    clear cart (opens the same confirm dialog as the button)
  *   P        open printer setup
+ *   E        record spending
  *   L        toggle English/Tamil
  */
 export function useKeyboardShortcuts({
@@ -57,6 +59,7 @@ export function useKeyboardShortcuts({
   onCycleCategory,
   onRequestClearCart,
   onOpenPrinterSetup,
+  onOpenExpenses,
 }: UseKeyboardShortcutsOptions): void {
   const { toggleLanguage } = useLanguage();
 
@@ -106,6 +109,12 @@ export function useKeyboardShortcuts({
         return;
       }
 
+      if (lower === "e") {
+        e.preventDefault();
+        onOpenExpenses();
+        return;
+      }
+
       if (e.key === "Enter") {
         if (!orderSubmit.submitting && !cart.isEmpty && cart.paymentMethod) {
           e.preventDefault();
@@ -132,6 +141,7 @@ export function useKeyboardShortcuts({
     onCycleCategory,
     onRequestClearCart,
     onOpenPrinterSetup,
+    onOpenExpenses,
     toggleLanguage,
   ]);
 }

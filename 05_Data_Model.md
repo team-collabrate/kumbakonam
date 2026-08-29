@@ -7,6 +7,7 @@ users/{userId}
 menu/{itemId}
 orders/{orderId}
   └── items: [ { itemId, name, price, qty, note } ]  (embedded array, not subcollection)
+expenses/{expenseId}
 ```
 
 ### 2. `users` Collection
@@ -61,9 +62,24 @@ Stores login PINs (hashed) and roles.
 ```
 > Item name/price are duplicated (denormalized) into the order at time of sale, so later menu price edits don't retroactively change historical order totals.
 
+### 4b. `expenses` Collection
+Money going out of the counter till — vegetables, milk, gas, and the rest of the day's buying. Kept separate from `orders` rather than modelled as a negative order: orders are sales and feed the owner's revenue figures, so mixing spend into them would quietly corrupt every total on the dashboard.
+
+| Field | Type | Description |
+|---|---|---|
+| `expenseId` (doc id) | string | Auto-generated |
+| `name` | string | What was bought, as the worker typed it, e.g. "Vegetables". 1–120 chars, enforced in rules |
+| `amount` | number | In ₹, always positive — the sign lives in the collection, not the number. Enforced `> 0` in rules |
+| `workerId` | string | Reference to `users.userId` who recorded it |
+| `createdAt` | timestamp | Server timestamp |
+| `syncedAt` | timestamp \| null | Set when confirmed written; null while queued offline |
+
+> Writes are **not awaited** before the UI confirms. A Firestore write promise does not resolve while the client is offline, so awaiting it would freeze the counter for the length of a wifi outage. The document id is minted locally, the write syncs by itself, and the returned `committed` promise is only used to catch a genuine refusal.
+
 ### 5. Relationships
 - `orders.workerId` → `users.userId` (which staff member created the order)
 - `orders.items[].itemId` → `menu.itemId` (denormalized copy; not a live reference)
+- `expenses.workerId` → `users.userId` (which staff member recorded the spend)
 
 ### 6. Aggregation Approach (v1)
 No separate "daily summary" collection for v1 — owner app computes today/week/month totals client-side by querying `orders` within a date range (`createdAt >= startOfDay` etc.) and reducing in-memory. Acceptable at this scale (single cafe, low order volume). Can be revisited with scheduled Cloud Functions if volume grows.
@@ -71,4 +87,5 @@ No separate "daily summary" collection for v1 — owner app computes today/week/
 ### 7. Firestore Security Rules (Summary)
 - `menu`: read → any authenticated session; write → `role == owner` only.
 - `orders`: read → any authenticated session; create → `role == worker` or `owner`; update/delete → `role == owner` only (e.g. correcting a mistake).
+- `expenses`: read → any authenticated session; create → `workerId` must reference a real, active worker/owner, and `amount`/`name` are validated in the rules themselves, because bad values here would not fail loudly — they would just make the books wrong.
 - `users`: no direct client read/write of `pinHash` field exposed to app logic beyond initial auth check (handled via a controlled query, e.g. a Cloud Function or restricted read pattern) — to be finalized in engineering phase for hardened PIN validation.

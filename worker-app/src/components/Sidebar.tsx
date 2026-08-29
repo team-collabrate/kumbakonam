@@ -3,11 +3,13 @@ import { ConfirmDialog, LanguageToggle, useLanguage } from "@kumbakonam/shared";
 import "./Sidebar.css";
 
 export interface SidebarProps {
+  onOpenExpenses: () => void;
   onOpenPrinterSetup: () => void;
   onLogout: () => void;
 }
 
 const STRINGS = {
+  expenses: { en: "Record spending", ta: "செலவு பதிவு" },
   printerSetup: { en: "Printer setup", ta: "பிரிண்டர் அமைப்பு" },
   logOut: { en: "Log out", ta: "வெளியேறு" },
   logoutTitle: { en: "Log out?", ta: "வெளியேறவா?" },
@@ -18,8 +20,8 @@ const STRINGS = {
   logoutConfirm: { en: "Log Out", ta: "வெளியேறு" },
 };
 
-/** Thin icon sidebar (Design Brief §5) — printer setup + logout. */
-export function Sidebar({ onOpenPrinterSetup, onLogout }: SidebarProps) {
+/** Thin icon sidebar (Design Brief §5) — spending, printer setup, logout. */
+export function Sidebar({ onOpenExpenses, onOpenPrinterSetup, onLogout }: SidebarProps) {
   const { language } = useLanguage();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
@@ -30,6 +32,15 @@ export function Sidebar({ onOpenPrinterSetup, onLogout }: SidebarProps) {
       </span>
       <div className="sidebar__actions">
         <LanguageToggle />
+        <button
+          type="button"
+          className="sidebar__icon-btn"
+          onClick={onOpenExpenses}
+          aria-label={STRINGS.expenses[language]}
+          title={STRINGS.expenses[language]}
+        >
+          💸
+        </button>
         <button
           type="button"
           className="sidebar__icon-btn"
