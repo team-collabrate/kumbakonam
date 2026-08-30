@@ -35,13 +35,13 @@
    uses the brand accent: these are states, not emphasis, and the accent is
    already spoken for by selected controls. */
 .stat-card__value--spend {
-  color: var(--color-warning);
+  color: var(--color-spend-text);
 }
 
 .stat-card__value--negative {
-  color: var(--color-danger);
+  color: var(--color-negative-text);
 }
 
 .stat-card__value--positive {
-  color: var(--color-success);
+  color: var(--color-positive-text);
 }

@@ -25,11 +25,12 @@
   white-space: nowrap;
 }
 
-/* Warning, not danger: spending is normal business, not an error. */
+/* Spend, not danger: buying stock is normal business, not an error. Uses
+   the text variant — the fill token is unreadable on a white row. */
 .expense-row__amount {
   flex: none;
   font-size: var(--text-body);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--color-warning);
+  color: var(--color-spend-text);
 }

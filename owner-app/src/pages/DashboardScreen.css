@@ -10,28 +10,159 @@
   letter-spacing: var(--tracking-title);
 }
 
-.dashboard-screen__stats {
-  display: flex;
+/* Names the group beneath it, so each block answers "what am I looking at"
+   before the reader has to infer it from the figures. */
+.dashboard-screen__group {
+  margin: var(--space-6) 0 var(--space-3);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  /* Small caps need positive tracking; the display sizes above take
+     negative. Never one tracking value across the scale. */
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+/* Every block sits on the same two tracks. Nothing straddles a column, so
+   labels and figures line up down the whole screen. */
+.dashboard-screen__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
-  margin-top: var(--space-5);
 }
 
-.dashboard-screen__stats--secondary {
-  margin-top: var(--space-3);
+/* ---- Today: sales, spend and net as one card ------------------------- */
+
+.today-card {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Secondary figures drop the card material entirely — weight of surface
-   encodes rank, so the primary row reads first without a size change. */
-.dashboard-screen__stats--secondary .stat-card {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  padding: var(--space-3) var(--space-4);
+.today-card__label {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caption);
+  color: var(--color-text-muted);
 }
 
-.dashboard-screen__stats--secondary .stat-card__value {
+/* The one number the owner opens the app for. Leading tightens as the type
+   grows, tracking goes negative — large text reads too loose at 0. */
+.today-card__value {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-display);
+  font-weight: 700;
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.today-card__split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-3);
+  /* A hairline, not a full rule: these belong to the figure above, they are
+     not a separate section. */
+  border-top: 1px solid var(--color-border);
+}
+
+.today-card__split > div {
+  min-width: 0;
+}
+
+/* Flush right, so Net lands on the card's right text edge — which is the
+   same edge the cards below end on. Matching the *inner* grid to the outer
+   one instead would have needed a contrived gap, and this repeats the
+   label-left / figure-right pattern the Owed card already uses. */
+.today-card__split > div:last-child {
+  text-align: right;
+}
+
+.today-card__split dt {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--tracking-caption);
+  color: var(--color-text-muted);
+}
+
+.today-card__split dd {
+  margin: var(--space-1) 0 0;
   font-size: var(--text-title-3);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
 }
+
+/* ---- Owed to you ----------------------------------------------------- */
+
+.owed-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.owed-card__text {
+  min-width: 0;
+}
+
+.owed-card__label {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Adding context is what makes this simple, not removing it: a bare figure
+   doesn't say whether it is one regular or twenty. */
+.owed-card__caption {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-footnote);
+  color: var(--color-text-muted);
+}
+
+.owed-card__value {
+  margin: 0;
+  flex: none;
+  font-size: var(--text-title-2);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: var(--tracking-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+/* ---- Semantic figures ------------------------------------------------ */
+
+/* Re-tuned per theme in theme.css. The fill tokens these replaced were
+   chosen against the worker app's near-black and scored 1.6:1 on this
+   white card — legible on one ground is not legible on the other. */
+.is-spend {
+  color: var(--color-spend-text) !important;
+}
+
+.is-negative {
+  color: var(--color-negative-text) !important;
+}
+
+.is-positive {
+  color: var(--color-positive-text) !important;
+}
+
+/* ---- Rest ------------------------------------------------------------ */
 
 .dashboard-screen__section {
   margin-top: var(--space-6);

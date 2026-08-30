@@ -73,14 +73,16 @@
   color: var(--color-text);
 }
 
+/* Text variants, re-tuned per theme. The fill tokens these replaced score
+   1.6:1 (amber) and 1.9:1 (green) on this white card — well under AA. */
 .reports-screen__summary dd.is-spend {
-  color: var(--color-warning);
+  color: var(--color-spend-text);
 }
 
 .reports-screen__summary dd.is-net {
-  color: var(--color-success);
+  color: var(--color-positive-text);
 }
 
 .reports-screen__summary dd.is-negative {
-  color: var(--color-danger);
+  color: var(--color-negative-text);
 }

@@ -10,6 +10,16 @@
   --color-danger: #d64545;
   --color-danger-contrast: #ffffff;
 
+  /* Semantic colour used as *text*, which is a different problem from the
+     fills above. The three tokens above were chosen against the worker
+     app's near-black and score 10.9:1 there; on the owner app's white card
+     the same amber is 1.59:1 — effectively invisible. So the text variants
+     are re-tuned per theme below rather than shared. Same hues, legible
+     luminance. */
+  --color-spend-text: #f2c94c;
+  --color-positive-text: #6fcf97;
+  --color-negative-text: #ff6b6b;
+
   --font-family: "Inter", "Roboto", system-ui, -apple-system, sans-serif;
 
   /* ---- Type scale ----
@@ -90,6 +100,11 @@
 }
 
 [data-theme="light"] {
+  /* Measured on #ffffff: 6.04, 6.08 and 6.22:1 — all clear of AA's 4.5. */
+  --color-spend-text: #7d5e0a;
+  --color-positive-text: #18704a;
+  --color-negative-text: #b3302b;
+
   --color-bg: #f6f6f3;
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;

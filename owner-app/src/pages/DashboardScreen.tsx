@@ -13,14 +13,20 @@ import "./DashboardScreen.css";
 
 const STRINGS = {
   title: { en: "Dashboard", ta: "டாஷ்போர்டு" },
+  today: { en: "Today", ta: "இன்று" },
   todaySales: { en: "Today's Sales", ta: "இன்றைய விற்பனை" },
-  weeklySales: { en: "Weekly Sales", ta: "வார விற்பனை" },
-  monthlySales: { en: "Monthly Sales", ta: "மாத விற்பனை" },
-  spentToday: { en: "Spent Today", ta: "இன்றைய செலவு" },
-  netToday: { en: "Net Today", ta: "இன்றைய நிகர" },
-  outstanding: { en: "On Credit", ta: "நிலுவை கடன்" },
-  ordersToday: { en: "Orders Today", ta: "இன்றைய ஆர்டர்கள்" },
-  avgOrderToday: { en: "Avg Order Today", ta: "இன்றைய சராசரி ஆர்டர்" },
+  spent: { en: "Spent", ta: "செலவு" },
+  net: { en: "Net", ta: "நிகர" },
+  thisPeriod: { en: "This week & month", ta: "இந்த வாரம் & மாதம்" },
+  weeklySales: { en: "Week", ta: "வாரம்" },
+  monthlySales: { en: "Month", ta: "மாதம்" },
+  ordersToday: { en: "Orders", ta: "ஆர்டர்கள்" },
+  avgOrderToday: { en: "Avg order", ta: "சராசரி ஆர்டர்" },
+  owed: { en: "Owed to you", ta: "வர வேண்டியது" },
+  onCredit: { en: "On credit", ta: "நிலுவை கடன்" },
+  acrossOne: { en: "from 1 customer", ta: "1 வாடிக்கையாளரிடம்" },
+  acrossMany: { en: "from {n} customers", ta: "{n} வாடிக்கையாளர்களிடம்" },
+  allSettled: { en: "Everyone has settled", ta: "அனைவரும் கடனை அடைத்துவிட்டனர்" },
   topItemsToday: { en: "Top Items Today", ta: "இன்றைய முக்கிய பொருட்கள்" },
   loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
 };
@@ -43,16 +49,24 @@ export function DashboardScreen() {
   const weeklyTotal = useMemo(() => computeDashboardStats(weekly.orders).totalSales, [weekly.orders]);
   const monthlyTotal = useMemo(() => computeDashboardStats(monthly.orders).totalSales, [monthly.orders]);
 
+  const netToday = dailyStats.totalSales - dailySpend.totalSpent;
+  const dayHasActivity = dailyStats.totalSales > 0 || dailySpend.totalSpent > 0;
+
   const graphData = useMemo(() => {
     if (graphMode === "weekly") return bucketByDayOfWeek(weekly.orders, language);
     return bucketByWeekOfMonth(monthly.orders, monthlyRange.start, language);
   }, [graphMode, weekly.orders, monthly.orders, monthlyRange.start, language]);
 
-  // What the day actually left behind, once the buying is taken off.
-  const netToday = dailyStats.totalSales - dailySpend.totalSpent;
-
   const graphLoading = graphMode === "weekly" ? weekly.loading : monthly.loading;
   const error = daily.error ?? weekly.error ?? monthly.error ?? dailySpend.error ?? customers.error;
+
+  const owedCount = customers.outstanding.length;
+  const owedCaption =
+    owedCount === 0
+      ? STRINGS.allSettled[language]
+      : owedCount === 1
+        ? STRINGS.acrossOne[language]
+        : STRINGS.acrossMany[language].replace("{n}", String(owedCount));
 
   return (
     <div className="dashboard-screen">
@@ -64,38 +78,59 @@ export function DashboardScreen() {
         <>
           <ValueGraphCard mode={graphMode} onModeChange={setGraphMode} data={graphData} loading={graphLoading} />
 
-          <div className="dashboard-screen__stats">
-            <StatCard label={STRINGS.todaySales[language]} value={formatCurrency(dailyStats.totalSales)} />
+          <h2 className="dashboard-screen__group">{STRINGS.today[language]}</h2>
+
+          {/* One card, because money in / out / left is one story. Splitting
+              it across rows of two and three is what stopped the columns
+              lining up, and left the reader to work out the relationship. */}
+          <section className="today-card">
+            <p className="today-card__label">{STRINGS.todaySales[language]}</p>
+            <p className="today-card__value">{formatCurrency(dailyStats.totalSales)}</p>
+
+            <dl className="today-card__split">
+              <div>
+                <dt>{STRINGS.spent[language]}</dt>
+                <dd className={dailySpend.totalSpent > 0 ? "is-spend" : ""}>
+                  {dailySpend.totalSpent > 0 ? "−" : ""}
+                  {formatCurrency(dailySpend.totalSpent)}
+                </dd>
+              </div>
+              <div>
+                <dt>{STRINGS.net[language]}</dt>
+                {/* Uncoloured until the day has done something: a red zero
+                    before the first sale would read as a problem. */}
+                <dd className={!dayHasActivity ? "" : netToday < 0 ? "is-negative" : "is-positive"}>
+                  {formatCurrency(netToday)}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <div className="dashboard-screen__pair">
+            <StatCard label={STRINGS.ordersToday[language]} value={String(dailyStats.orderCount)} />
+            <StatCard label={STRINGS.avgOrderToday[language]} value={formatCurrency(dailyStats.avgOrderValue)} />
+          </div>
+
+          <h2 className="dashboard-screen__group">{STRINGS.thisPeriod[language]}</h2>
+
+          <div className="dashboard-screen__pair">
             <StatCard label={STRINGS.weeklySales[language]} value={formatCurrency(weeklyTotal)} />
             <StatCard label={STRINGS.monthlySales[language]} value={formatCurrency(monthlyTotal)} />
           </div>
 
-          <div className="dashboard-screen__stats dashboard-screen__stats--secondary">
-            <StatCard
-              label={STRINGS.spentToday[language]}
-              value={formatCurrency(dailySpend.totalSpent)}
-              tone={dailySpend.totalSpent > 0 ? "spend" : "neutral"}
-            />
-            <StatCard
-              label={STRINGS.netToday[language]}
-              value={formatCurrency(netToday)}
-              // Only coloured once the day has actually done something —
-              // a red zero before the first sale would read as a problem.
-              tone={dailyStats.totalSales === 0 && dailySpend.totalSpent === 0 ? "neutral" : netToday < 0 ? "negative" : "positive"}
-            />
-          </div>
+          {/* A running receivable, not a figure for today — so it gets its
+              own group rather than sitting beside the day's counts. */}
+          <h2 className="dashboard-screen__group">{STRINGS.owed[language]}</h2>
 
-          <div className="dashboard-screen__stats dashboard-screen__stats--secondary">
-            {/* Not part of today's net: this is money already counted as a
-                sale on the day it was taken, still waiting to be collected. */}
-            <StatCard
-              label={STRINGS.outstanding[language]}
-              value={formatCurrency(customers.totalOutstanding)}
-              tone={customers.totalOutstanding > 0 ? "spend" : "neutral"}
-            />
-            <StatCard label={STRINGS.ordersToday[language]} value={String(dailyStats.orderCount)} />
-            <StatCard label={STRINGS.avgOrderToday[language]} value={formatCurrency(dailyStats.avgOrderValue)} />
-          </div>
+          <section className="owed-card">
+            <div className="owed-card__text">
+              <p className="owed-card__label">{STRINGS.onCredit[language]}</p>
+              <p className="owed-card__caption">{owedCaption}</p>
+            </div>
+            <p className={`owed-card__value ${owedCount > 0 ? "is-spend" : ""}`}>
+              {formatCurrency(customers.totalOutstanding)}
+            </p>
+          </section>
 
           <section className="dashboard-screen__section">
             <h2 className="dashboard-screen__section-title">{STRINGS.topItemsToday[language]}</h2>
