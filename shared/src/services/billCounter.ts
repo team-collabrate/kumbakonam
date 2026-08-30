@@ -1,5 +1,6 @@
+import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
-import { getFirestoreDb } from "../firebase";
+import { getFirebaseAuth, getFirestoreDb } from "../firebase";
 
 /**
  * Sequential bill numbers, starting at 1 — continuous for the life of the
@@ -78,15 +79,44 @@ function reportIssued(billNo: number): void {
 }
 
 /**
+ * Resolves once Firebase Auth has a signed-in user.
+ *
+ * Needed because this module is called from main.tsx at raw app boot,
+ * before React has even rendered SessionProvider (which is what actually
+ * calls signInAnonymously, on mount). On a fresh load, `onAuthStateChanged`
+ * fires immediately with `null` — the signed-out state — well before that
+ * anonymous sign-in resolves; resolving on the first callback regardless
+ * of its value would race exactly the same way calling this with no wait
+ * at all did. Querying Firestore too early doesn't throw at the call site
+ * either — it just runs unauthenticated, and `counters` requires
+ * isSignedIn(), so every call was silently hitting permission-denied and
+ * falling back to local-only. Non-fatal by design, but it meant the
+ * fresh-install recovery path this function exists for never actually ran.
+ */
+function waitForSignedIn(): Promise<void> {
+  const auth = getFirebaseAuth();
+  if (auth.currentUser) return Promise.resolve();
+  return new Promise((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+}
+
+/**
  * Called once at worker app startup. Catches the local counter up to
  * Firestore's high-water-mark if the server is ahead — the recovery path
  * for a cleared/reinstalled device. Best-effort: if this can't reach the
- * server (offline at startup), the local counter is used as-is and this
- * silently does nothing, which is correct — there's nothing more accurate
- * to fall back to offline.
+ * server (offline at startup, or auth never completes), the local counter
+ * is used as-is and this silently does nothing, which is correct — there's
+ * nothing more accurate to fall back to offline.
  */
 export async function seedBillCounterFromServer(): Promise<void> {
   try {
+    await waitForSignedIn();
     const db = getFirestoreDb();
     const snap = await getDoc(doc(db, "counters", "billNo"));
     const serverValue = (snap.data()?.value as number | undefined) ?? 0;

@@ -3,6 +3,7 @@ import {
   adjustCustomerBalance,
   createOrder,
   getNextBillNo,
+  markOrderSynced,
   useLanguage,
   watchOrderSyncStatus,
   type OrderItem,
@@ -152,6 +153,14 @@ export function useOrderSubmit(
           if (!state.isPending) {
             setPendingOrderIds((ids) => ids.filter((id) => id !== orderId));
             unsubscribe();
+            // Genuinely synced (not rejected, not pending) — record that.
+            // Fire-and-forget: this is a courtesy timestamp for anyone
+            // auditing sync health later, not something the badge or any
+            // current screen reads back, so a failure here doesn't need to
+            // surface anywhere.
+            markOrderSynced(orderId).catch((err) =>
+              console.error(`Failed to mark order ${orderId} as synced`, err),
+            );
           }
         },
         (err) => {

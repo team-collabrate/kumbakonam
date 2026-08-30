@@ -97,10 +97,20 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner']);
-      allow update: if isSignedIn()
-        && isActiveUserWithRole(request.resource.data.voidedBy, ['owner'])
-        && request.resource.data.status == 'voided'
-        && resource.data.status != 'voided';
+      allow update: if isSignedIn() && (
+        // Void — see the comment above.
+        (isActiveUserWithRole(request.resource.data.voidedBy, ['owner'])
+          && request.resource.data.status == 'voided'
+          && resource.data.status != 'voided')
+        ||
+        // markOrderSynced() — touches syncedAt and nothing else, by the
+        // same worker (or owner) the order already belongs to. Narrow on
+        // purpose: affectedKeys().hasOnly(['syncedAt']) means this branch
+        // can never be used to smuggle in a status/total/item change
+        // alongside a sync timestamp.
+        (isActiveUserWithRole(resource.data.workerId, ['worker', 'owner'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['syncedAt']))
+      );
       // Never hard-deleted — voiding (above) is the only cancellation
       // path, and it keeps the document (and its bill number) rather than
       // erasing it, the same append-only-history principle customerPayments
