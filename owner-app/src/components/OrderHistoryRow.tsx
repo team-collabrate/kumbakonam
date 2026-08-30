@@ -20,6 +20,7 @@ const STRINGS = {
   discount: { en: "Discount", ta: "தள்ளுபடி" },
   gpay: { en: "GPay", ta: "GPay" },
   cash: { en: "Cash", ta: "ரொக்கம்" },
+  onAccount: { en: "On account", ta: "கடன்" },
 };
 
 export interface OrderHistoryRowProps {
@@ -42,6 +43,10 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
           <span className="order-row__meta">
             {itemCount} {itemCount === 1 ? STRINGS.item[language] : STRINGS.items[language]} ·{" "}
             {PAYMENT_LABEL[order.paymentMethod][language]}
+            {/* Who a credit bill is on account for, right in the collapsed
+                row — this is the one payment method where "how was it
+                settled" isn't the point, "who still owes for it" is. */}
+            {order.paymentMethod === "credit" && order.customerName ? ` · ${order.customerName}` : ""}
           </span>
         </div>
         <span className="order-row__total">{formatCurrency(order.total)}</span>
@@ -74,6 +79,12 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
             <div className="order-row__discount-line">
               <span>{STRINGS.discount[language]}</span>
               <span>−{formatCurrency(order.discount)}</span>
+            </div>
+          )}
+          {order.paymentMethod === "credit" && order.customerName && (
+            <div className="order-row__discount-line">
+              <span>{STRINGS.onAccount[language]}</span>
+              <span>{order.customerName}</span>
             </div>
           )}
           {order.paymentMethod === "split" && (

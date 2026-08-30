@@ -24,3 +24,28 @@
   background: color-mix(in srgb, var(--color-warning) 16%, transparent);
   border-color: color-mix(in srgb, var(--color-warning) 30%, transparent);
 }
+
+/* Icon over caption, for a narrow fixed-width column rather than a header
+   bar — same colour tokens as the inline pill above, just stacked instead
+   of side by side, and sized to sit among the sidebar's icon buttons. */
+.sync-badge--compact {
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  padding: 6px 2px;
+  border-radius: var(--radius-md);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.sync-badge__icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.sync-badge__caption {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}

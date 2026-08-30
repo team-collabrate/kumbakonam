@@ -3,30 +3,16 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) 0;
+  padding: var(--space-3) 4px var(--space-4);
   background: var(--color-surface);
   border-right: 1px solid var(--color-border);
 }
 
-.sidebar__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-  font-size: var(--text-callout);
-  font-weight: 700;
-  letter-spacing: var(--tracking-title);
-  box-shadow: var(--shadow-sm);
-}
-
-/* Centre the children explicitly. The language toggle is wider than the
-   icon buttons and so decides this column's width; under the default
-   `stretch` the fixed-width buttons couldn't fill it and settled against
-   the left edge, sitting ~11px off-centre from everything above them. */
+/* Centre the children explicitly. A button wider than the rest used to
+   decide this column's width; under the default `stretch` narrower fixed-
+   width buttons couldn't fill it and settled off-centre. Every button here
+   is now the same 44px width, but this stays — it's what keeps a future
+   width mismatch from silently reintroducing the same drift. */
 .sidebar__actions {
   display: flex;
   flex-direction: column;
@@ -57,6 +43,31 @@
 .sidebar__icon-btn:active {
   background: var(--color-surface-raised);
   transform: scale(0.92);
+}
+
+/* Language / khata / spend: icon on top, a one-word caption underneath.
+   Grows downward (height), never outward — the column stays 44px wide like
+   every other icon button here, so it can't be what pushes the sidebar's
+   own fixed width. */
+.sidebar__icon-btn--labeled {
+  flex-direction: column;
+  gap: 1px;
+  height: auto;
+  min-height: var(--tap-target-min);
+  padding: 6px 2px 5px;
+}
+
+.sidebar__icon-glyph {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sidebar__icon-caption {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+  font-family: "Noto Sans Tamil", "Nirmala UI", "Latha", sans-serif;
 }
 
 @media (max-width: 900px) {
