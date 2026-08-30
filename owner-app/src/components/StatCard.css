@@ -1,7 +1,10 @@
 .stat-card {
   flex: 1;
   min-width: 0;
-  padding: var(--space-4);
+  /* A touch more generous than before — these are read, not tapped, so the
+     extra breathing room costs nothing and the card stops feeling cramped
+     next to the Today card's own padding. */
+  padding: var(--space-4) var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   border: 1px solid var(--color-border);

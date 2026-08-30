@@ -38,16 +38,30 @@ export function DashboardScreen() {
   const dailyRange = useMemo(() => getRange("daily"), []);
   const weeklyRange = useMemo(() => getRange("weekly"), []);
   const monthlyRange = useMemo(() => getRange("monthly"), []);
+  // getRange already takes a reference date — yesterday's window is just
+  // "today's window, computed as of 24h ago", not a separate calculation.
+  const yesterdayRange = useMemo(() => getRange("daily", new Date(Date.now() - 86400000)), []);
 
   const daily = useOrdersInRange(dailyRange);
   const weekly = useOrdersInRange(weeklyRange);
   const monthly = useOrdersInRange(monthlyRange);
+  const yesterday = useOrdersInRange(yesterdayRange);
   const dailySpend = useExpensesInRange(dailyRange);
   const customers = useCustomers();
 
   const dailyStats = useMemo(() => computeDashboardStats(daily.orders), [daily.orders]);
   const weeklyTotal = useMemo(() => computeDashboardStats(weekly.orders).totalSales, [weekly.orders]);
   const monthlyTotal = useMemo(() => computeDashboardStats(monthly.orders).totalSales, [monthly.orders]);
+  const yesterdayTotal = useMemo(() => computeDashboardStats(yesterday.orders).totalSales, [yesterday.orders]);
+
+  // A real day-over-day change, not a decorative percentage — null when
+  // there's nothing honest to compare against yet (no sales either day, or
+  // yesterday had none — a percentage against zero is either 0/0 or an
+  // infinite jump, neither of which tells the owner anything true).
+  const salesChange = useMemo(() => {
+    if (yesterdayTotal <= 0 || dailyStats.totalSales <= 0) return null;
+    return Math.round(((dailyStats.totalSales - yesterdayTotal) / yesterdayTotal) * 100);
+  }, [dailyStats.totalSales, yesterdayTotal]);
 
   const netToday = dailyStats.totalSales - dailySpend.totalSpent;
   const dayHasActivity = dailyStats.totalSales > 0 || dailySpend.totalSpent > 0;
@@ -84,7 +98,17 @@ export function DashboardScreen() {
               it across rows of two and three is what stopped the columns
               lining up, and left the reader to work out the relationship. */}
           <section className="today-card">
-            <p className="today-card__label">{STRINGS.todaySales[language]}</p>
+            <div className="today-card__headline">
+              <p className="today-card__label">{STRINGS.todaySales[language]}</p>
+              {/* A real day-over-day change, not a decorative badge — absent
+                  rather than shown as 0% or an infinite jump on the days
+                  there's nothing honest to compare against (see salesChange). */}
+              {salesChange !== null && (
+                <span className={`today-card__change ${salesChange >= 0 ? "is-up" : "is-down"}`}>
+                  {salesChange >= 0 ? "▲" : "▼"} {Math.abs(salesChange)}%
+                </span>
+              )}
+            </div>
             <p className="today-card__value">{formatCurrency(dailyStats.totalSales)}</p>
 
             <dl className="today-card__split">

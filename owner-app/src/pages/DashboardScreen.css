@@ -41,12 +41,45 @@
   box-shadow: var(--shadow-sm);
 }
 
+.today-card__headline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .today-card__label {
   margin: 0;
   font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: var(--tracking-caption);
   color: var(--color-text-muted);
+}
+
+/* A real change against yesterday, not a decorative badge — the two tones
+   reuse the same positive/negative text tokens the Net figure already uses
+   below, just on their own tinted pill background (same convention as the
+   sync-status badge elsewhere in the app). */
+.today-card__change {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-card__change.is-up {
+  color: var(--color-positive-text);
+  background: color-mix(in srgb, var(--color-positive-text) 14%, transparent);
+}
+
+.today-card__change.is-down {
+  color: var(--color-negative-text);
+  background: color-mix(in srgb, var(--color-negative-text) 14%, transparent);
 }
 
 /* The one number the owner opens the app for. Leading tightens as the type
