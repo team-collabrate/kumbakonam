@@ -33,6 +33,7 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Masala Dosa": "/items/masala-dosa.png",
   "Ghee Roast": "/items/masala-dosa.png",
   "Onion Dosa": "/items/onion-dosa.png",
+  "Uthappam / Onion Uthappam": "/items/onion-dosa.png",
   "Podi Dosa": "/items/podi-dosa.png",
   "Onion Podi Dosa": "/items/onion-podi-dosa.png",
 
