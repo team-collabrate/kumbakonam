@@ -8,7 +8,7 @@ import type { Language } from "./LanguageContext";
  * through the day rather than alphabetically, so a worker reaches for the
  * one they're serving now.
  */
-export const MENU_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Tea"] as const;
+export const MENU_CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Tea", "Vadai"] as const;
 
 export type MenuCategory = (typeof MENU_CATEGORIES)[number];
 
@@ -22,6 +22,7 @@ const CATEGORY_LABELS: Record<string, Record<Language, string>> = {
   Lunch: { en: "Lunch", ta: "மதிய உணவு" },
   Dinner: { en: "Dinner", ta: "இரவு உணவு" },
   Tea: { en: "Tea", ta: "தேநீர்" },
+  Vadai: { en: "Vadai", ta: "வடை" },
 
   // Superseded by the four above. Kept translated because menu items and
   // past orders created under them still exist, and a stored category is

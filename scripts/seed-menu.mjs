@@ -23,63 +23,121 @@ const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, "utf8"));
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-// Pure local cafe menu — hot drinks, juice, and snacks only (no tiffin/meals).
-// `name` is the canonical English/Tanglish name — used for orders, receipts,
-// and ESC/POS printing (most thermal printers can't render Tamil glyphs).
-// `nameTa` is the Tamil-script name shown on-screen when the app language
-// is switched to Tamil. Icons are single emoji — closest available match.
+// Full tiffin/meals menu, sourced verbatim from pos_menu_by_timing.md —
+// name and price match that file exactly. No `icon` field: photos are
+// coming later, so items fall back to a letter avatar (see ProductIcon)
+// rather than carrying a placeholder emoji that would need replacing.
+//
+// Dosa, Kal Dosa, Masala Dosa, Onion Dosa, Podi Dosa, Ghee Roast and Onion
+// Podi Dosa are intentionally listed under both Breakfast and Dinner, per
+// the source file's own note — two separate menu docs, same name and price,
+// so the item is reachable from whichever tab a worker has open at the time.
 const items = [
-  // Hot Drinks
-  { name: "Filter Coffee", nameTa: "பில்டர் காபி", price: 20, category: "Hot Drinks", icon: "☕" },
-  { name: "Masala Chai", nameTa: "மசாலா தேநீர்", price: 15, category: "Hot Drinks", icon: "🍵" },
-  { name: "Plain Tea", nameTa: "தேநீர்", price: 15, category: "Hot Drinks", icon: "🍵" },
-  { name: "Ginger Tea", nameTa: "இஞ்சி தேநீர்", price: 15, category: "Hot Drinks", icon: "🍵" },
-  { name: "Black Coffee", nameTa: "கருப்பு காபி", price: 15, category: "Hot Drinks", icon: "☕" },
-  { name: "Green Tea", nameTa: "பச்சை தேநீர்", price: 20, category: "Hot Drinks", icon: "🍵" },
-  { name: "Badam Milk", nameTa: "பாதாம் பால்", price: 40, category: "Hot Drinks", icon: "🥛" },
-  { name: "Horlicks", nameTa: "ஹார்லிக்ஸ்", price: 30, category: "Hot Drinks", icon: "🥛" },
+  // Breakfast
+  { name: "Idli", nameTa: "இட்லி", price: 12, category: "Breakfast" },
+  { name: "Pongal", nameTa: "பொங்கல்", price: 50, category: "Breakfast" },
+  { name: "Poori (Single)", nameTa: "பூரி (ஒன்று)", price: 20, category: "Breakfast" },
+  { name: "Poori Set", nameTa: "பூரி செட்", price: 40, category: "Breakfast" },
+  { name: "Chapathi (Single)", nameTa: "சப்பாத்தி (ஒன்று)", price: 20, category: "Breakfast" },
+  { name: "Chapathi Set", nameTa: "சப்பாத்தி செட்", price: 40, category: "Breakfast" },
+  { name: "Dosa / Nice Dosa", nameTa: "தோசை", price: 30, category: "Breakfast" },
+  { name: "Uthappam / Onion Uthappam", nameTa: "உத்தப்பம் / வெங்காய உத்தப்பம்", price: 50, category: "Breakfast" },
+  { name: "Idiyappam 1 Set", nameTa: "இடியாப்பம் (1 செட்)", price: 25, category: "Breakfast" },
+  { name: "Kal Dosa", nameTa: "கல் தோசை", price: 25, category: "Breakfast" },
+  { name: "Masala Dosa", nameTa: "மசாலா தோசை", price: 65, category: "Breakfast" },
+  { name: "Onion Dosa", nameTa: "வெங்காய தோசை", price: 60, category: "Breakfast" },
+  { name: "Podi Dosa", nameTa: "பொடி தோசை", price: 70, category: "Breakfast" },
+  { name: "Ghee Roast", nameTa: "நெய் ரோஸ்ட்", price: 70, category: "Breakfast" },
+  { name: "Onion Podi Dosa", nameTa: "வெங்காய பொடி தோசை", price: 65, category: "Breakfast" },
 
-  // Juice
-  { name: "Lemon Juice", nameTa: "எலுமிச்சை ஜூஸ்", price: 20, category: "Juice", icon: "🍋" },
-  { name: "Rose Milk", nameTa: "ரோஜா பால்", price: 30, category: "Juice", icon: "🥛" },
-  { name: "Buttermilk", nameTa: "மோர்", price: 15, category: "Juice", icon: "🥛" },
-  { name: "Sweet Lassi", nameTa: "இனிப்பு லஸ்ஸி", price: 30, category: "Juice", icon: "🥤" },
-  { name: "Orange Juice", nameTa: "ஆரஞ்சு ஜூஸ்", price: 30, category: "Juice", icon: "🍊" },
-  { name: "Grape Juice", nameTa: "திராட்சை ஜூஸ்", price: 30, category: "Juice", icon: "🍇" },
-  { name: "Watermelon Juice", nameTa: "தர்பூசணி ஜூஸ்", price: 25, category: "Juice", icon: "🍉" },
-  { name: "Mango Juice", nameTa: "மாம்பழ ஜூஸ்", price: 35, category: "Juice", icon: "🥭" },
-  { name: "Sugarcane Juice", nameTa: "கரும்பு சாறு", price: 25, category: "Juice", icon: "🧃" },
+  // Lunch
+  { name: "Meals", nameTa: "மீல்ஸ்", price: 90, category: "Lunch" },
+  { name: "Parcel Meals", nameTa: "பார்சல் மீல்ஸ்", price: 100, category: "Lunch" },
+  { name: "Veg Biryani", nameTa: "வெஜ் பிரியாணி", price: 60, category: "Lunch" },
+  { name: "Tomato Rice", nameTa: "தக்காளி சாதம்", price: 50, category: "Lunch" },
+  { name: "Lemon Rice", nameTa: "எலுமிச்சை சாதம்", price: 50, category: "Lunch" },
+  { name: "Tamarind Rice", nameTa: "புளியோதரை", price: 50, category: "Lunch" },
+  { name: "Curd Rice", nameTa: "தயிர் சாதம்", price: 50, category: "Lunch" },
+  { name: "Sambar Rice", nameTa: "சாம்பார் சாதம்", price: 50, category: "Lunch" },
 
-  // Snacks
-  { name: "Veg Sandwich", nameTa: "வெஜ் சாண்ட்விச்", price: 60, category: "Snacks", icon: "🥪" },
-  { name: "Bread Omelette", nameTa: "பிரட் ஆம்லெட்", price: 50, category: "Snacks", icon: "🍳" },
-  { name: "Samosa (2 pcs)", nameTa: "சமோசா (2)", price: 30, category: "Snacks", icon: "🥟" },
-  { name: "Bonda (2 pcs)", nameTa: "போண்டா (2)", price: 30, category: "Snacks", icon: "🍡" },
-  { name: "Mysore Bonda (2 pcs)", nameTa: "மைசூர் போண்டா (2)", price: 35, category: "Snacks", icon: "🍡" },
-  { name: "Vegetable Cutlet (2 pcs)", nameTa: "வெஜிடபிள் கட்லெட் (2)", price: 45, category: "Snacks", icon: "🥔" },
-  { name: "Masala Vada (2 pcs)", nameTa: "மசாலா வடை (2)", price: 35, category: "Snacks", icon: "🍩" },
-  { name: "Murukku", nameTa: "முறுக்கு", price: 20, category: "Snacks", icon: "🌀" },
-  { name: "Banana Chips", nameTa: "வாழைக்காய் சிப்ஸ்", price: 20, category: "Snacks", icon: "🍌" },
+  // Dinner
+  { name: "Veg Rice", nameTa: "வெஜ் ரைஸ்", price: 80, category: "Dinner" },
+  { name: "Mushroom Rice", nameTa: "காளான் ரைஸ்", price: 90, category: "Dinner" },
+  { name: "Paneer Rice", nameTa: "பன்னீர் ரைஸ்", price: 100, category: "Dinner" },
+  { name: "Mushroom Noodles", nameTa: "காளான் நூடுல்ஸ்", price: 90, category: "Dinner" },
+  { name: "Paneer Noodles", nameTa: "பன்னீர் நூடுல்ஸ்", price: 100, category: "Dinner" },
+  { name: "Parotta", nameTa: "பரோட்டா", price: 15, category: "Dinner" },
+  { name: "Kothu Parotta", nameTa: "கொத்து பரோட்டா", price: 70, category: "Dinner" },
+  { name: "Chilli Parotta", nameTa: "சில்லி பரோட்டா", price: 80, category: "Dinner" },
+  { name: "Dosa / Nice Dosa", nameTa: "தோசை", price: 30, category: "Dinner" },
+  { name: "Kal Dosa", nameTa: "கல் தோசை", price: 25, category: "Dinner" },
+  { name: "Masala Dosa", nameTa: "மசாலா தோசை", price: 65, category: "Dinner" },
+  { name: "Onion Dosa", nameTa: "வெங்காய தோசை", price: 60, category: "Dinner" },
+  { name: "Podi Dosa", nameTa: "பொடி தோசை", price: 70, category: "Dinner" },
+  { name: "Ghee Roast", nameTa: "நெய் ரோஸ்ட்", price: 70, category: "Dinner" },
+  { name: "Onion Podi Dosa", nameTa: "வெங்காய பொடி தோசை", price: 65, category: "Dinner" },
+
+  // Tea
+  { name: "Tea", nameTa: "தேநீர்", price: 15, category: "Tea" },
+  { name: "Coffee", nameTa: "காபி", price: 20, category: "Tea" },
+  { name: "Sukku Coffee", nameTa: "சுக்கு காபி", price: 20, category: "Tea" },
+  { name: "Lemon Tea", nameTa: "எலுமிச்சை தேநீர்", price: 15, category: "Tea" },
+  { name: "Black Tea", nameTa: "கருப்பு தேநீர்", price: 10, category: "Tea" },
+  { name: "1/2 Parcel Tea", nameTa: "1/2 பார்சல் தேநீர்", price: 30, category: "Tea" },
+  { name: "1 Parcel Tea", nameTa: "1 பார்சல் தேநீர்", price: 35, category: "Tea" },
+  { name: "1-1/2 Parcel Tea", nameTa: "1-1/2 பார்சல் தேநீர்", price: 60, category: "Tea" },
+  { name: "Parcel Coffee", nameTa: "பார்சல் காபி", price: 40, category: "Tea" },
+  { name: "1/2 Parcel Coffee", nameTa: "1/2 பார்சல் காபி", price: 35, category: "Tea" },
+  { name: "1 Parcel Coffee", nameTa: "1 பார்சல் காபி", price: 40, category: "Tea" },
+  { name: "1-1/2 Parcel Coffee", nameTa: "1-1/2 பார்சல் காபி", price: 70, category: "Tea" },
+  { name: "Milk", nameTa: "பால்", price: 20, category: "Tea" },
+  { name: "1 Milk", nameTa: "1 பால்", price: 40, category: "Tea" },
+  { name: "Badam Milk", nameTa: "பாதாம் பால்", price: 30, category: "Tea" },
+  { name: "Badam Milk Parcel", nameTa: "பாதாம் பால் பார்சல்", price: 50, category: "Tea" },
+  { name: "Horlicks", nameTa: "ஹார்லிக்ஸ்", price: 20, category: "Tea" },
+  { name: "Boost", nameTa: "பூஸ்ட்", price: 20, category: "Tea" },
+  { name: "Water", nameTa: "தண்ணீர்", price: 20, category: "Tea" },
+  { name: "Water Can", nameTa: "தண்ணீர் கேன்", price: 20, category: "Tea" },
+
+  // Vadai
+  { name: "Vadai", nameTa: "வடை", price: 10, category: "Vadai" },
+  { name: "Samosa", nameTa: "சமோசா", price: 10, category: "Vadai" },
+  { name: "Bonda", nameTa: "போண்டா", price: 20, category: "Vadai" },
+  { name: "Kesari", nameTa: "கேசரி", price: 20, category: "Vadai" },
+  { name: "Neyi Poli", nameTa: "நெய் போளி", price: 20, category: "Vadai" },
+  { name: "Paniyaram", nameTa: "பணியாரம்", price: 20, category: "Vadai" },
+  { name: "Other Snacks", nameTa: "மற்ற தின்பண்டங்கள்", price: 1, category: "Vadai" },
 ];
 
-const existing = await db.collection("menu").get();
-if (!existing.empty) {
-  const batch = db.batch();
-  existing.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
-  console.log(`Cleared ${existing.size} existing menu item(s).`);
-}
+async function seed() {
+  const menuRef = db.collection("menu");
 
-for (const item of items) {
+  // Clear whatever is there now, in batches (Firestore caps a batch at 500
+  // writes) — the collection is small, but this stays correct if it grows.
+  const existing = await menuRef.get();
+  console.log(`Clearing ${existing.size} existing menu item(s)...`);
+  const docs = existing.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = db.batch();
+    for (const doc of docs.slice(i, i + 400)) batch.delete(doc.ref);
+    await batch.commit();
+  }
+
+  console.log(`Adding ${items.length} menu item(s)...`);
   const now = Timestamp.now();
-  const ref = await db.collection("menu").add({
-    ...item,
-    active: true,
-    createdAt: now,
-    updatedAt: now,
-  });
-  console.log(`Created ${item.icon} ${item.name} / ${item.nameTa} (${item.category}, ₹${item.price}) -> ${ref.id}`);
+  for (let i = 0; i < items.length; i += 400) {
+    const batch = db.batch();
+    for (const item of items.slice(i, i + 400)) {
+      const ref = menuRef.doc();
+      batch.set(ref, { ...item, active: true, createdAt: now, updatedAt: now });
+    }
+    await batch.commit();
+  }
+
+  console.log("Done.");
 }
 
-console.log(`Done. Seeded ${items.length} items.`);
-process.exit(0);
+seed().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
