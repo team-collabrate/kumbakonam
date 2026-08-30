@@ -1,0 +1,118 @@
+import { useCallback, useState, type FormEvent } from "react";
+import { createExpense, useLanguage } from "@kumbakonam/shared";
+import "./RecordExpenseModal.css";
+
+const STRINGS = {
+  title: { en: "Record spending", ta: "செலவு பதிவு" },
+  subtitle: {
+    en: "Vegetables, milk, gas — anything paid for out of the till.",
+    ta: "காய்கறி, பால், கேஸ் — கல்லாவிலிருந்து செலுத்திய அனைத்தும்.",
+  },
+  name: { en: "What was bought", ta: "என்ன வாங்கியது" },
+  namePlaceholder: { en: "Vegetables", ta: "காய்கறி" },
+  amount: { en: "Amount (₹)", ta: "தொகை (₹)" },
+  save: { en: "Save", ta: "சேமி" },
+  close: { en: "Close", ta: "மூடு" },
+  needName: { en: "Type what was bought.", ta: "என்ன வாங்கியது என்று எழுதவும்." },
+  needAmount: { en: "Enter an amount above zero.", ta: "பூஜ்ஜியத்திற்கு மேல் தொகையை உள்ளிடவும்." },
+  failed: { en: "Could not save. Try again.", ta: "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்." },
+};
+
+export interface RecordExpenseModalProps {
+  /** The active owner's own user id — expenses.workerId per the schema name, filled by whoever recorded it. */
+  ownerId: string;
+  onClose: () => void;
+}
+
+/**
+ * Owner-side equivalent of the worker app's ExpenseModal. The worker could
+ * always record till spending from the counter; the owner could only view
+ * it in reports afterward, with no way to log a purchase they made
+ * themselves (a supplier run, say) — this closes that gap. Same
+ * createExpense() call the worker uses; the rule already allows the owner
+ * role.
+ */
+export function RecordExpenseModal({ ownerId, onClose }: RecordExpenseModalProps) {
+  const { language } = useLanguage();
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      const trimmed = name.trim();
+      const value = Number(amount);
+
+      if (!trimmed) {
+        setError(STRINGS.needName[language]);
+        return;
+      }
+      if (!Number.isFinite(value) || value <= 0) {
+        setError(STRINGS.needAmount[language]);
+        return;
+      }
+
+      setSaving(true);
+      const { committed } = createExpense({ name: trimmed, amount: value, workerId: ownerId });
+      committed
+        .then(() => onClose())
+        .catch((err) => {
+          console.error("Expense write refused", err);
+          setError(STRINGS.failed[language]);
+          setSaving(false);
+        });
+    },
+    [name, amount, ownerId, language, onClose],
+  );
+
+  return (
+    <div className="record-expense__backdrop" role="dialog" aria-modal="true" aria-label={STRINGS.title[language]}>
+      <form className="record-expense" onSubmit={handleSubmit}>
+        <div>
+          <h2 className="record-expense__title">{STRINGS.title[language]}</h2>
+          <p className="record-expense__subtitle">{STRINGS.subtitle[language]}</p>
+        </div>
+
+        <label className="record-expense__field">
+          <span>{STRINGS.name[language]}</span>
+          <input
+            type="text"
+            value={name}
+            placeholder={STRINGS.namePlaceholder[language]}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={120}
+            autoFocus
+          />
+        </label>
+
+        <label className="record-expense__field">
+          <span>{STRINGS.amount[language]}</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step="any"
+            value={amount}
+            placeholder="0"
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </label>
+
+        <div className="record-expense__status" role="status">
+          {error ?? " "}
+        </div>
+
+        <div className="record-expense__actions">
+          <button type="button" className="record-expense__cancel" onClick={onClose} disabled={saving}>
+            {STRINGS.close[language]}
+          </button>
+          <button type="submit" className="record-expense__save" disabled={saving}>
+            {STRINGS.save[language]}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}

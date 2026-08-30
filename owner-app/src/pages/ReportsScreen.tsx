@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { formatCurrency, useLanguage } from "@kumbakonam/shared";
+import { formatCurrency, useLanguage, useSession, type Customer } from "@kumbakonam/shared";
 import { getRange, type RangeMode } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
@@ -10,14 +10,18 @@ import { RangeSegmentedControl } from "../components/RangeSegmentedControl";
 import { SalesChart } from "../components/SalesChart";
 import { OrderHistoryRow } from "../components/OrderHistoryRow";
 import { ExpenseHistoryRow } from "../components/ExpenseHistoryRow";
+import { RecordPaymentModal } from "../components/RecordPaymentModal";
+import { RecordExpenseModal } from "../components/RecordExpenseModal";
 import "./ReportsScreen.css";
 
 const STRINGS = {
   title: { en: "Reports", ta: "அறிக்கைகள்" },
   orderHistory: { en: "Order History", ta: "ஆர்டர் வரலாறு" },
   spending: { en: "Spending", ta: "செலவுகள்" },
+  addExpense: { en: "+ Add", ta: "+ சேர்" },
   onCredit: { en: "Outstanding Credit", ta: "நிலுவை கடன்" },
   nobodyOwes: { en: "Nobody owes anything.", ta: "யாருக்கும் கடன் இல்லை." },
+  collect: { en: "Collect", ta: "பணம் பெறு" },
   sales: { en: "Sales", ta: "விற்பனை" },
   spent: { en: "Spent", ta: "செலவு" },
   net: { en: "Net", ta: "நிகர" },
@@ -28,11 +32,19 @@ const STRINGS = {
 
 export function ReportsScreen() {
   const { language } = useLanguage();
+  const { sessionUser } = useSession();
   const [mode, setMode] = useState<RangeMode>("daily");
   const range = useMemo(() => getRange(mode), [mode]);
   const { orders, loading, error } = useOrdersInRange(range);
   const spend = useExpensesInRange(range);
   const customers = useCustomers();
+  // The worker app has always been able to take a payment (KhataModal) and
+  // record spending (ExpenseModal) — the owner app could only watch both
+  // happen from the dashboard, with no equivalent action of its own. Both
+  // service calls already accept the owner role at the Firestore rules
+  // layer; this was a missing screen, not a missing permission.
+  const [collectingFrom, setCollectingFrom] = useState<Customer | null>(null);
+  const [addingExpense, setAddingExpense] = useState(false);
 
   // Reuses computeDashboardStats purely for its voided-order exclusion —
   // this screen only needs the one number, not the rest of the shape.
@@ -102,13 +114,29 @@ export function ReportsScreen() {
                 <div className="expense-row" key={customer.customerId}>
                   <span className="expense-row__name">{customer.name}</span>
                   <span className="expense-row__amount">{formatCurrency(customer.balance)}</span>
+                  {sessionUser && (
+                    <button
+                      type="button"
+                      className="reports-screen__collect"
+                      onClick={() => setCollectingFrom(customer)}
+                    >
+                      {STRINGS.collect[language]}
+                    </button>
+                  )}
                 </div>
               ))
             )}
           </section>
 
           <section className="reports-screen__history">
-            <h2 className="reports-screen__history-title">{STRINGS.spending[language]}</h2>
+            <div className="reports-screen__history-header">
+              <h2 className="reports-screen__history-title">{STRINGS.spending[language]}</h2>
+              {sessionUser && (
+                <button type="button" className="reports-screen__add" onClick={() => setAddingExpense(true)}>
+                  {STRINGS.addExpense[language]}
+                </button>
+              )}
+            </div>
             {spend.loading ? (
               <p className="reports-screen__status">{STRINGS.loading[language]}</p>
             ) : spend.expenses.length === 0 ? (
@@ -120,6 +148,18 @@ export function ReportsScreen() {
             )}
           </section>
         </>
+      )}
+
+      {collectingFrom && sessionUser && (
+        <RecordPaymentModal
+          customer={collectingFrom}
+          ownerId={sessionUser.userId}
+          onClose={() => setCollectingFrom(null)}
+        />
+      )}
+
+      {addingExpense && sessionUser && (
+        <RecordExpenseModal ownerId={sessionUser.userId} onClose={() => setAddingExpense(false)} />
       )}
     </div>
   );
