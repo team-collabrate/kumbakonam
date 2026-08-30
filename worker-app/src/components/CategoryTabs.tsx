@@ -1,9 +1,7 @@
 import { translateCategory, useLanguage } from "@kumbakonam/shared";
-import { ALL_TAB } from "../hooks/useMenuCategories";
 import "./CategoryTabs.css";
 
 const STRINGS = {
-  all: { en: "All", ta: "அனைத்தும்" },
   categoriesLabel: { en: "Menu categories", ta: "மெனு பிரிவுகள்" },
 };
 
@@ -32,7 +30,7 @@ export function CategoryTabs({ categories, activeCategory, onCategoryChange }: C
           className={`category-tabs__tab ${activeCategory === category ? "is-active" : ""}`}
           onClick={() => onCategoryChange(category)}
         >
-          {category === ALL_TAB ? STRINGS.all[language] : translateCategory(category, language)}
+          {translateCategory(category, language)}
         </button>
       ))}
     </div>

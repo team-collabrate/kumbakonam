@@ -1,28 +1,41 @@
-/* Takes the middle of the header, between the logo and the sync badge.
-   Wraps rather than scrolls: at these sizes five tabs need about 910px and
-   a 1280-wide tablet leaves roughly 540 beside the logo, so a scrolling
-   strip would park Dinner and Tea off-screen. A tab you have to go looking
-   for is no use mid-rush, so the header takes a second row instead. */
+/* Takes the middle of the header, between the logo and the menu edge — the
+   sync badge no longer lives in this row (see .worker-home__sync-float),
+   which was the previous plan's second-biggest space cost after the tabs
+   themselves.
+   
+   A second wrapped row was the earlier answer here, but it grows the header
+   every time a category is added — six tabs today, more later — and eats
+   into the grid's height each time. This instead stays one line always
+   (never wraps) and falls back to a horizontal scroll on the narrowest
+   tablets, which the sized-up 44px+ targets and hidden scrollbar make a
+   normal swipe rather than something to hunt for. At >=1440px CSS width
+   with the current six tabs, every one is visible with no scrolling at all. */
 .category-tabs {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .category-tabs__tab {
   flex: 0 0 auto;
-  /* Sized well past the 44px minimum: these are the most-pressed controls on
-     the screen after the item cards, and staff hit them mid-rush. */
-  min-height: 60px;
-  padding: 0 var(--space-5);
+  /* Comfortably above the 44px minimum despite the tighter padding below —
+     height, not width, is what a fast thumb actually needs. */
+  min-height: 52px;
+  padding: 0 var(--space-4);
   border-radius: 999px;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text-muted);
-  font-size: var(--text-title-3);
+  font-size: var(--text-callout);
   font-weight: 600;
   letter-spacing: var(--tracking-body);
   cursor: pointer;
@@ -44,12 +57,13 @@
   font-weight: 700;
 }
 
-/* On a narrower tablet these wrap one-per-row and the header swallows the
-   grid. Still comfortably above the 44px touch minimum, just less generous. */
-@media (max-width: 1200px) {
+/* Below ~1440px the six tabs no longer fit without scrolling even at this
+   tighter size — drop one size further so the swipe distance stays short
+   rather than growing with every category the shop adds. */
+@media (max-width: 1440px) {
   .category-tabs__tab {
-    min-height: 52px;
-    padding: 0 var(--space-4);
+    min-height: 48px;
+    padding: 0 var(--space-3);
     font-size: var(--text-body);
   }
 }

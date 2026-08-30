@@ -166,12 +166,12 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
       <Sidebar onOpenKhata={openKhata} onOpenExpenses={openExpenses} onOpenPrinterSetup={openPrinterSetup} onLogout={onLogout} />
 
       <div className="worker-home__menu">
-        {/* Logo, category tabs, sync badge — one row. The app name, the
-            signed-in worker and the shortcut crib came off entirely; the
-            tabs moved up from the grid so the menu starts at the top of its
-            own scroll area with nothing floating over the cards. The sync
-            badge stays: it is the only place the counter learns an order
-            hasn't reached the server yet. */}
+        {/* Logo and category tabs — one row, and now the row's whole width,
+            since the sync badge moved to a fixed corner (below) rather than
+            competing with the tabs for space. The app name, the signed-in
+            worker and the shortcut crib came off entirely; the tabs moved up
+            from the grid so the menu starts at the top of its own scroll
+            area with nothing floating over the cards. */}
         <div className="worker-home__menu-header">
           <img
             className="worker-home__logo"
@@ -188,6 +188,14 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
           />
+        </div>
+
+        {/* Pinned to the viewport rather than either column, so it never
+            costs the tabs (or the cart header) any width, and stays visible
+            regardless of which panel is scrolled. This is the only place
+            the counter learns an order hasn't reached the server yet, so it
+            still needs to be seen without hunting for it. */}
+        <div className="worker-home__sync-float">
           <SyncStatusBadge status={syncStatus} />
         </div>
         <MenuGrid

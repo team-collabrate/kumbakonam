@@ -62,3 +62,15 @@
     width: 88px;
   }
 }
+
+/* A small always-visible status pill, pinned to the viewport rather than to
+   either column. It used to sit at the end of the category-tabs row, which
+   made it compete with the tabs for the same shrinking width — moving it
+   here means adding a category never costs it space, and it stays put
+   regardless of which panel (menu or cart) the worker has scrolled. */
+.worker-home__sync-float {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: 15;
+}
