@@ -33,7 +33,10 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Masala Dosa": "/items/masala-dosa.png",
   "Ghee Roast": "/items/masala-dosa.png",
   "Onion Dosa": "/items/onion-dosa.png",
-  "Uthappam / Onion Uthappam": "/items/onion-dosa.png",
+  // Live menu item is "Onion Uthappam" — seed-menu.mjs's original
+  // "Uthappam / Onion Uthappam" was renamed in the owner app at some
+  // point, and this map is keyed by the live name, not the seed script's.
+  "Onion Uthappam": "/items/onion-dosa.png",
   "Podi Dosa": "/items/podi-dosa.png",
   "Onion Podi Dosa": "/items/onion-podi-dosa.png",
 
@@ -77,8 +80,10 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Badam Milk Parcel": "/items/badam-milk.png",
   Boost: "/items/boost.png",
   Horlicks: "/items/milk.png",
-  Water: "/items/water-bottle.png",
-  "Water Can": "/items/water-bottle.png",
+  // Live menu item is "Water Bottle" — seed-menu.mjs's separate "Water" and
+  // "Water Can" entries don't exist there; they were consolidated into one
+  // item in the owner app.
+  "Water Bottle": "/items/water-bottle.png",
 
   Vadai: "/items/vada.png",
   Samosa: "/items/samosa.png",
