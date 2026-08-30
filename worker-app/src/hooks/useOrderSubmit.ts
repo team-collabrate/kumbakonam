@@ -2,17 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   adjustCustomerBalance,
   createOrder,
+  getNextBillNo,
   useLanguage,
   watchOrderSyncStatus,
   type OrderItem,
 } from "@kumbakonam/shared";
 import type { UseCartResult } from "./useCart";
-import {
-  billNoFromOrderId,
-  paymentLabelForReceipt,
-  splitBreakdownForReceipt,
-  type BillInput,
-} from "../printing/receipt";
+import { paymentLabelForReceipt, splitBreakdownForReceipt, type BillInput } from "../printing/receipt";
 
 export interface UseOrderSubmitResult {
   submit: () => Promise<void>;
@@ -101,6 +97,12 @@ export function useOrderSubmit(
       // the "Print Bill" button would sit on "Saving…" indefinitely with a
       // real network outage, instead of completing immediately the way an
       // offline-first POS has to.
+      // Also synchronous and offline-safe, for the same reason — see
+      // billCounter.ts. This is the real, sequential bill number (starts at
+      // 1, never resets, never repeats); the order id is no longer used for
+      // anything the customer sees.
+      const billNo = getNextBillNo();
+
       const { orderId, synced } = createOrder({
         items,
         subtotal: cart.subtotal,
@@ -114,6 +116,7 @@ export function useOrderSubmit(
         ...(isSplit ? { cashAmount: cart.splitCashAmount, upiAmount: cart.splitUpiAmount } : {}),
         ...(credit ? { customerId: credit.customerId, customerName: credit.name } : {}),
         workerId,
+        billNo,
       });
       // Background-only: logs a real write failure (e.g. offline the whole
       // shift and the app closed before reconnecting) without gating
@@ -161,7 +164,7 @@ export function useOrderSubmit(
 
       onSaved({
         orderId,
-        billNo: billNoFromOrderId(orderId),
+        billNo: String(billNo),
         // The receipt prints in Tamil regardless of the app's language, so it
         // takes nameTa when the item has one.
         items: cart.lines.map((l) => ({

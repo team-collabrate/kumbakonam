@@ -1,5 +1,5 @@
 import type { KeyboardEvent, MouseEvent } from "react";
-import { formatCurrency, ProductIcon, translateItemName, useLanguage, type MenuItem } from "@kumbakonam/shared";
+import { formatCurrency, translateItemName, useLanguage, type MenuItem } from "@kumbakonam/shared";
 import "./MenuItemCard.css";
 
 /**
@@ -135,25 +135,32 @@ export function MenuItemCard({ item, shortcutKey, qty, onAdd, onIncrement, onDec
     // silently unwrap the inner ones) — role="button" on a div is what
     // makes room for them while keeping the same tap/keyboard behaviour.
     <div
-      className="menu-item-card"
+      className={`menu-item-card ${image ? "" : "menu-item-card--no-photo"}`}
       role="button"
       tabIndex={0}
       onClick={handleCardActivate}
       onKeyDown={handleKeyDown}
       aria-label={`${displayName}, ${formatCurrency(item.price)}`}
     >
-      <div className="menu-item-card__media">
-        {image ? (
-          <img className="menu-item-card__photo" src={image} alt="" loading="lazy" />
-        ) : (
-          <ProductIcon name={item.name} icon={item.icon} fallbackLabel={displayName} variant="card" />
-        )}
-      </div>
+      {/* No more hand-drawn/emoji/letter-avatar fallback here — an item with
+          no photo yet is a plain text card (see .menu-item-card--no-photo),
+          not a stand-in illustration. The old fallback made every unphotographed
+          item look intentionally styled instead of simply "not photographed
+          yet", which stopped being honest once most of the menu had real
+          photos around it. */}
+      {image && (
+        <>
+          <div className="menu-item-card__media">
+            <img className="menu-item-card__photo" src={image} alt="" loading="lazy" />
+          </div>
 
-      {/* Pure gradient, no content — kept separate from __media so the photo
-          and the darkening never have to renegotiate stacking with anything
-          drawn on top of them. */}
-      <div className="menu-item-card__scrim" aria-hidden="true" />
+          {/* Pure gradient, no content — kept separate from __media so the
+              photo and the darkening never have to renegotiate stacking with
+              anything drawn on top of them. Only makes sense over a photo —
+              a photo-less card has nothing under it that needs darkening. */}
+          <div className="menu-item-card__scrim" aria-hidden="true" />
+        </>
+      )}
 
       {shortcutKey && (
         <span className="menu-item-card__shortcut" aria-hidden="true">

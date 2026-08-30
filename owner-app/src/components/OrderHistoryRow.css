@@ -121,3 +121,38 @@
   font-variant-numeric: tabular-nums;
   color: var(--color-text-muted);
 }
+
+/* A voided order stays in the list — never removed, only dimmed — since
+   the point is "this happened but doesn't count", not "this never
+   happened". Struck-through total makes that legible at a glance, without
+   needing to expand the row to find out why a number looks off. */
+.order-row.is-voided .order-row__time,
+.order-row.is-voided .order-row__total {
+  color: var(--color-text-muted);
+}
+
+.order-row.is-voided .order-row__total {
+  text-decoration: line-through;
+}
+
+.order-row__void {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-danger);
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.order-row__void:active {
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
+}
+
+.order-row__void-error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-footnote);
+  color: var(--color-danger);
+}

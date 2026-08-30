@@ -18,8 +18,14 @@ const DAY_LABELS: Record<Language, string[]> = {
 
 const WEEK_LABEL: Record<Language, string> = { en: "Week", ta: "வாரம்" };
 
+/** A voided order is a mistake the owner cancelled, not a sale — never counted here. */
+function excludeVoided(orders: Order[]): Order[] {
+  return orders.filter((o) => o.status !== "voided");
+}
+
 /** Daily view — bucket by hour, trimmed to the range that actually has activity (avoids a mostly-empty 24-bar chart). */
-export function bucketByHour(orders: Order[]): ChartBucket[] {
+export function bucketByHour(allOrders: Order[]): ChartBucket[] {
+  const orders = excludeVoided(allOrders);
   const totals = new Array<number>(24).fill(0);
   for (const order of orders) {
     totals[order.createdAt.toDate().getHours()] += order.total;
@@ -37,7 +43,8 @@ export function bucketByHour(orders: Order[]): ChartBucket[] {
 }
 
 /** Weekly view — bucket by day of week, Monday through Sunday, always all 7 shown for context. */
-export function bucketByDayOfWeek(orders: Order[], language: Language = "en"): ChartBucket[] {
+export function bucketByDayOfWeek(allOrders: Order[], language: Language = "en"): ChartBucket[] {
+  const orders = excludeVoided(allOrders);
   const totals = new Array<number>(7).fill(0);
   for (const order of orders) {
     const dayIndex = (order.createdAt.toDate().getDay() + 6) % 7; // 0 = Monday
@@ -48,7 +55,8 @@ export function bucketByDayOfWeek(orders: Order[], language: Language = "en"): C
 }
 
 /** Monthly view — bucket by week-of-month (days 1-7, 8-14, ...) so the chart stays ~4-5 bars instead of up to 31. */
-export function bucketByWeekOfMonth(orders: Order[], monthStart: Date, language: Language = "en"): ChartBucket[] {
+export function bucketByWeekOfMonth(allOrders: Order[], monthStart: Date, language: Language = "en"): ChartBucket[] {
+  const orders = excludeVoided(allOrders);
   const totals = new Map<number, number>();
   for (const order of orders) {
     const dayOfMonth = order.createdAt.toDate().getDate();

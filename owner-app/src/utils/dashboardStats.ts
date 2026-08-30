@@ -19,7 +19,13 @@ export interface DashboardStats {
 const TOP_ITEMS_LIMIT = 5;
 
 /** Client-side aggregation per Data Model §6 — acceptable at single-cafe scale. */
-export function computeDashboardStats(orders: Order[]): DashboardStats {
+export function computeDashboardStats(allOrders: Order[]): DashboardStats {
+  // A voided order is a mistake the owner cancelled after the fact, not a
+  // sale — it must not move sales totals, GPay collected, or top items.
+  // The order document is kept (see voidOrder in orders.service.ts) so
+  // order history can still show it happened; it just doesn't count here.
+  const orders = allOrders.filter((o) => o.status !== "voided");
+
   const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
   const orderCount = orders.length;
   const avgOrderValue = orderCount > 0 ? Math.round(totalSales / orderCount) : 0;

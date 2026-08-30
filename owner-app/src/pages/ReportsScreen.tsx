@@ -5,6 +5,7 @@ import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
 import { useCustomers } from "../hooks/useCustomers";
 import { bucketByDayOfWeek, bucketByHour, bucketByWeekOfMonth } from "../utils/chartBuckets";
+import { computeDashboardStats } from "../utils/dashboardStats";
 import { RangeSegmentedControl } from "../components/RangeSegmentedControl";
 import { SalesChart } from "../components/SalesChart";
 import { OrderHistoryRow } from "../components/OrderHistoryRow";
@@ -33,7 +34,9 @@ export function ReportsScreen() {
   const spend = useExpensesInRange(range);
   const customers = useCustomers();
 
-  const totalSales = useMemo(() => orders.reduce((sum, o) => sum + o.total, 0), [orders]);
+  // Reuses computeDashboardStats purely for its voided-order exclusion —
+  // this screen only needs the one number, not the rest of the shape.
+  const totalSales = useMemo(() => computeDashboardStats(orders).totalSales, [orders]);
   const net = totalSales - spend.totalSpent;
 
   // Either subscription failing means the figures below would be wrong

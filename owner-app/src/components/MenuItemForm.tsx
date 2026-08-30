@@ -7,7 +7,6 @@ export interface MenuItemFormValues {
   nameTa: string;
   price: number;
   category: string;
-  icon: string;
   active: boolean;
 }
 
@@ -20,17 +19,18 @@ export interface MenuItemFormProps {
   onClose: () => void;
 }
 
-const ICON_SUGGESTIONS = ["☕", "🍵", "🥛", "🍋", "🍊", "🍉", "🥤", "🍡", "🥟", "🍩", "🥔", "🥪", "🍞", "🫘", "🌀"];
-
 const STRINGS = {
   editItem: { en: "Edit Item", ta: "பொருளைத் திருத்து" },
   addItem: { en: "Add Item", ta: "பொருள் சேர்" },
   name: { en: "Name", ta: "பெயர் (ஆங்கிலம்)" },
-  nameTa: { en: "Tamil Name (optional)", ta: "தமிழ் பெயர் (விருப்பம்)" },
+  // No longer "(optional)" — the printed bill always shows this name,
+  // never the English one, regardless of which language the app is
+  // running in (see translateItemName / receipt.ts). A blank Tamil name
+  // used to mean the receipt silently fell back to English; requiring it
+  // here is what actually closes that gap, not just a stricter label.
+  nameTa: { en: "Tamil Name", ta: "தமிழ் பெயர்" },
   price: { en: "Price (₹)", ta: "விலை (₹)" },
   category: { en: "Category", ta: "பிரிவு" },
-  icon: { en: "Icon (optional)", ta: "ஐகான் (விருப்பம்)" },
-  useIcon: { en: "Use", ta: "பயன்படுத்து" },
   active: { en: "Active", ta: "செயலில்" },
   cancel: { en: "Cancel", ta: "ரத்துசெய்" },
   save: { en: "Save", ta: "சேமி" },
@@ -44,10 +44,9 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
   const [nameTa, setNameTa] = useState(item?.nameTa ?? "");
   const [price, setPrice] = useState(item?.price?.toString() ?? "");
   const [category, setCategory] = useState(item?.category ?? "");
-  const [icon, setIcon] = useState(item?.icon ?? "");
   const [active, setActive] = useState(item?.active ?? true);
 
-  const isValid = name.trim().length > 0 && Number(price) > 0;
+  const isValid = name.trim().length > 0 && nameTa.trim().length > 0 && Number(price) > 0;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -57,7 +56,6 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
       nameTa: nameTa.trim(),
       price: Number(price),
       category: category.trim(),
-      icon: icon.trim(),
       active,
     });
   };
@@ -84,6 +82,7 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
             value={nameTa}
             onChange={(e) => setNameTa(e.target.value)}
             placeholder="பில்டர் காபி"
+            required
           />
         </label>
 
@@ -118,31 +117,6 @@ export function MenuItemForm({ item, existingCategories, saving, error, onSave, 
             ))}
           </datalist>
         </label>
-
-        <label className="menu-form__field">
-          <span>{STRINGS.icon[language]}</span>
-          <input
-            type="text"
-            value={icon}
-            onChange={(e) => setIcon(e.target.value)}
-            placeholder="☕"
-            maxLength={4}
-          />
-        </label>
-
-        <div className="menu-form__icon-suggestions">
-          {ICON_SUGGESTIONS.map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              className={`menu-form__icon-chip ${icon === emoji ? "is-selected" : ""}`}
-              onClick={() => setIcon(emoji)}
-              aria-label={`${STRINGS.useIcon[language]} ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
 
         <label className="menu-form__toggle-field">
           <span>{STRINGS.active[language]}</span>

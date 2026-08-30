@@ -1,12 +1,13 @@
 import {
   Timestamp,
   collection,
-  deleteDoc,
   doc,
   getDocs,
+  increment,
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -33,6 +34,8 @@ export interface CreateOrderInput {
   customerId?: string;
   customerName?: string;
   workerId: string;
+  /** From getNextBillNo() — see billCounter.ts. */
+  billNo: number;
 }
 
 export interface CreateOrderResult {
@@ -151,7 +154,15 @@ export function subscribeToOrdersInRange(
   );
 }
 
-/** Owner-only correction path (e.g. fixing a mis-entered discount) — see Data Model §7. */
+/**
+ * Owner-only correction path (e.g. fixing a mis-entered discount) — see
+ * Data Model §7. Not currently called from either app's UI (no screen
+ * offers it yet). Left in place for that future feature, but note it will
+ * be rejected by the `orders update` rule as it stands today — that rule
+ * now only recognises the specific shape `voidOrder` writes (see below and
+ * firestore.rules); this path needs the same actor-verification treatment
+ * before it can ship.
+ */
 export type UpdateOrderInput = Partial<
   Pick<Order, "items" | "subtotal" | "discount" | "total" | "paymentMethod" | "status">
 >;
@@ -161,7 +172,50 @@ export async function updateOrder(orderId: string, input: UpdateOrderInput): Pro
   await updateDoc(doc(db, COLLECTION, orderId), input);
 }
 
-export async function deleteOrder(orderId: string): Promise<void> {
+/**
+ * Cancels a mistakenly-billed order — owner-only (see firestore.rules:
+ * `orders update` requires `voidedBy` to name a real, active owner).
+ *
+ * A soft delete, not `deleteDoc`: the document stays, so the bill number
+ * and the fact that an order once existed here are still on record — only
+ * `status` changes, and every sales/report calculation is expected to
+ * filter voided orders out (see computeDashboardStats, chartBuckets, and
+ * ReportsScreen — none of them are Firestore-query-side filters, since
+ * "still visible in history, just excluded from totals" needs the full
+ * document, not a narrower query).
+ *
+ * Reading-then-writing needs a transaction — not a problem here, unlike
+ * order *creation*: this only ever runs from the owner app, which has no
+ * offline write path to begin with (initFirebase({ offlinePersistence:
+ * false })), so there's no "must work with zero connectivity" constraint
+ * to preserve. The transaction buys real correctness instead: it can't
+ * double-void the same order, and if the order was a credit sale, the
+ * customer's balance is reversed in the same atomic write rather than as
+ * a separate, ever-so-slightly-racy follow-up call.
+ */
+export async function voidOrder(orderId: string, voidedBy: string): Promise<void> {
   const db = getFirestoreDb();
-  await deleteDoc(doc(db, COLLECTION, orderId));
+  const orderRef = doc(db, COLLECTION, orderId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(orderRef);
+    if (!snap.exists()) throw new Error("Order not found.");
+    const order = snap.data() as Omit<Order, "orderId">;
+    if (order.status === "voided") return; // already voided — idempotent, not an error
+
+    tx.update(orderRef, { status: "voided", voidedAt: serverTimestamp(), voidedBy });
+
+    // A credit sale put money on the customer's tab when it was billed —
+    // voiding it has to take that back, or the customer keeps owing for an
+    // order that officially never happened.
+    if (order.paymentMethod === "credit" && order.customerId) {
+      // "customers" isn't imported as a constant here — customers.service.ts
+      // owns that collection and this is the one place outside it that
+      // needs to touch a customer document, specifically to keep this
+      // reversal atomic with the void itself.
+      tx.update(doc(db, "customers", order.customerId), {
+        balance: increment(-order.total),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  });
 }

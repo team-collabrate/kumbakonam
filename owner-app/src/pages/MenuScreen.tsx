@@ -53,7 +53,6 @@ export function MenuScreen() {
           nameTa: values.nameTa,
           price: values.price,
           category: values.category,
-          icon: values.icon,
         });
       } else if (formTarget) {
         await updateMenuItem(formTarget.itemId, values);

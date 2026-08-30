@@ -65,14 +65,3 @@ export function splitBreakdownForReceipt({ cash, upi }: SplitAmounts): string {
   return `ரொக்கம் ${cash.toFixed(2)} + GPay ${upi.toFixed(2)}`;
 }
 
-/**
- * Bill reference derived from the Firestore order id.
- *
- * NOTE: this is unique but *not* sequential — it can't be, without a shared
- * counter. If the shop needs strictly increasing bill numbers (for GST or
- * cash-book reconciliation) that requires a Firestore transaction, not a
- * device-local tally, or two tablets would issue the same number.
- */
-export function billNoFromOrderId(orderId: string): string {
-  return orderId.slice(-4).toUpperCase();
-}

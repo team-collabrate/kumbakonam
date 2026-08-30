@@ -12,14 +12,33 @@ import type { Timestamp } from "firebase/firestore";
  * make historical orders render a blank payment label in the owner app.
  */
 export type PaymentMethod = "cash" | "upi" | "split" | "credit" | "card";
-export type OrderStatus = "completed";
+/**
+ * `voided` — the owner cancelled a mistakenly-billed order after the fact.
+ * The document is kept, never deleted, so the bill number and audit trail
+ * survive; every sales/report calculation excludes it instead. Only the
+ * owner app can set this (see `voidOrder` and the `orders` update rule in
+ * firestore.rules) — a worker mis-billing something is exactly the case
+ * this exists for, so the fix can't be something the worker triggers too.
+ */
+export type OrderStatus = "completed" | "voided";
 
 /** Embedded line item inside `orders/{orderId}.items` — see 05_Data_Model.md §4 */
 export interface OrderItem {
   itemId: string;
-  /** Canonical English/Tanglish name — ASCII-safe, what's sent to the ESC/POS printer. */
+  /**
+   * Canonical English/Tanglish name — screen display when the app language
+   * is English, and reports/exports.
+   *
+   * NOT what's sent to the printer, despite this comment's own history:
+   * receipts render to a bitmap (see worker-app/printing/receiptCanvas.ts),
+   * not ESC/POS text, specifically so they can carry Tamil script — the
+   * receipt always uses `nameTa`, never this field. See BillLine/`name` in
+   * printing/receipt.ts.
+   */
   name: string;
-  /** Tamil-script name captured at time of sale, for on-screen display only (bill view, order history, top items). */
+  /** Tamil-script name captured at time of sale, for on-screen display when
+   *  the app language is Tamil, AND for the printed receipt always,
+   *  regardless of the app's own language toggle (see the note on `name`). */
   nameTa?: string;
   price: number;
   qty: number;
@@ -55,4 +74,14 @@ export interface Order {
   /** Set once the write is confirmed by the server; null while queued offline */
   syncedAt: Timestamp | null;
   status: OrderStatus;
+  /**
+   * The bill number printed on the receipt — a real running count starting
+   * at 1, not derived from the order id (see shared/src/services/
+   * billCounter.ts). Optional only because orders taken before this field
+   * existed don't have one; every order from here on does.
+   */
+  billNo?: number;
+  /** Set only when status is "voided" — who cancelled it and when. */
+  voidedAt?: Timestamp;
+  voidedBy?: string;
 }

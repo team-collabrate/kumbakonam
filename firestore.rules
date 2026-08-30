@@ -46,15 +46,16 @@ service cloud.firestore {
     // -active account.
     //
     // What's still NOT enforceable without a schema or infra change:
-    // `menu` writes and `orders` update/delete have no actor-identifying
-    // field in the current Data Model to check against (menu docs don't
-    // record who edited them; order corrections don't record who's
-    // correcting them), so they remain `isSignedIn()`-gated only. Adding an
-    // `updatedBy` field to `menu` (and a similar field for order
-    // corrections) would let the same `isActiveUserWithRole()` pattern
-    // apply there too — a scoped, no-new-infra follow-up if you want it,
-    // but it's a small schema change so flagged here rather than made
-    // silently.
+    // `menu` writes have no actor-identifying field in the current Data
+    // Model to check against (menu docs don't record who edited them), so
+    // they remain `isSignedIn()`-gated only. Adding an `updatedBy` field
+    // would let the same `isActiveUserWithRole()` pattern apply there too
+    // — a scoped, no-new-infra follow-up if you want it, but it's a small
+    // schema change so flagged here rather than made silently.
+    //
+    // `orders` update no longer has this limitation — voiding an order now
+    // carries `voidedBy` and is checked the same way `create` checks
+    // `workerId` (see the `orders` match block below).
     // ---------------------------------------------------------------------
 
     // users — PIN login must read this collection before any role is known
@@ -78,13 +79,43 @@ service cloud.firestore {
 
     // orders — read is any signed-in session (owner dashboard, worker
     // history). Create is hardened: workerId must reference a real, active
-    // worker or owner. Update/delete (owner corrections) remain
-    // isSignedIn()-only — see limitation note above.
+    // worker or owner.
+    //
+    // Update used to be isSignedIn()-only (see the old limitation note
+    // this replaced) — that meant a worker session could, in principle,
+    // edit or void any order, which is exactly backwards: voiding a
+    // mistaken bill has to be something only the owner can do (Data Model
+    // requirement — a worker mis-billing something is the case this
+    // exists to fix, so the fix can't be a path the worker can also
+    // trigger). Now scoped to precisely the shape voidOrder() writes:
+    // voidedBy must name a real, active owner, and it can only move a
+    // non-voided order to voided, never anything else. Any other kind of
+    // order edit (e.g. the still-unbuilt discount-correction path
+    // UpdateOrderInput exists for) needs its own actor-verified shape
+    // before it can be allowed here.
     match /orders/{orderId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner']);
-      allow update, delete: if isSignedIn();
+      allow update: if isSignedIn()
+        && isActiveUserWithRole(request.resource.data.voidedBy, ['owner'])
+        && request.resource.data.status == 'voided'
+        && resource.data.status != 'voided';
+      // Never hard-deleted — voiding (above) is the only cancellation
+      // path, and it keeps the document (and its bill number) rather than
+      // erasing it, the same append-only-history principle customerPayments
+      // already uses below.
+      allow delete: if false;
+    }
+
+    // counters — the running sequential bill number the worker app hands
+    // out (see shared/src/services/billCounter.ts). Only ever a
+    // high-water-mark integer, never money or anything else sensitive, so
+    // any signed-in session may read/bump it — the worst a bad write here
+    // does is a wrong number on a paper receipt, not a wrong balance.
+    match /counters/{counterId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     // expenses — money spent from the till. Same shape of protection as

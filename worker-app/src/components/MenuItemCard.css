@@ -25,9 +25,9 @@
   outline-offset: 2px;
 }
 
-/* Fills the entire card — the photo (or, until one exists for this item,
-   the existing hand-drawn icon on its own tint) is the card now, not a
-   strip across the top of it. */
+/* Fills the entire card — the photo is the card now, not a strip across
+   the top of it. Only present when there's an actual photo (see
+   MenuItemCard.tsx) — a card with no photo has nothing in this layer. */
 .menu-item-card__media {
   position: absolute;
   inset: 0;
@@ -41,18 +41,21 @@
   display: block;
 }
 
-/* The fallback icon used to sit in a 72px-tall strip with square corners
-   (it shared the card with a body section below it); here it's the whole
-   card, so both overrides just mean "fill the space, no separate corner". */
-.menu-item-card__media .product-icon--card {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
+/* No photo yet: a plain card, not a stand-in illustration. Same surface
+   token every other plain card in the app uses, so it reads as "ordinary",
+   not "broken" or "placeholder". */
+.menu-item-card--no-photo {
+  background: var(--color-surface);
 }
 
-.menu-item-card__media .product-icon__svg {
-  width: 58%;
-  height: 58%;
+.menu-item-card--no-photo .menu-item-card__name,
+.menu-item-card--no-photo .menu-item-card__price {
+  color: var(--color-text);
+  text-shadow: none;
+}
+
+.menu-item-card--no-photo .menu-item-card__price {
+  color: var(--color-text-muted);
 }
 
 /* Strong, from the bottom — this is what makes white text reliably
