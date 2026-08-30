@@ -21,7 +21,7 @@ const STRINGS = {
   weeklySales: { en: "Week", ta: "வாரம்" },
   monthlySales: { en: "Month", ta: "மாதம்" },
   ordersToday: { en: "Orders", ta: "ஆர்டர்கள்" },
-  avgOrderToday: { en: "Avg order", ta: "சராசரி ஆர்டர்" },
+  gpayToday: { en: "GPay", ta: "GPay" },
   owed: { en: "Owed to you", ta: "வர வேண்டியது" },
   onCredit: { en: "On credit", ta: "நிலுவை கடன்" },
   acrossOne: { en: "from 1 customer", ta: "1 வாடிக்கையாளரிடம்" },
@@ -108,7 +108,9 @@ export function DashboardScreen() {
 
           <div className="dashboard-screen__pair">
             <StatCard label={STRINGS.ordersToday[language]} value={String(dailyStats.orderCount)} />
-            <StatCard label={STRINGS.avgOrderToday[language]} value={formatCurrency(dailyStats.avgOrderValue)} />
+            {/* Only what actually reached the GPay account — a split
+                bill's cash half isn't in this figure (see gpayCollected). */}
+            <StatCard label={STRINGS.gpayToday[language]} value={formatCurrency(dailyStats.gpayCollected)} />
           </div>
 
           <h2 className="dashboard-screen__group">{STRINGS.thisPeriod[language]}</h2>
