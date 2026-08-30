@@ -21,10 +21,16 @@ export const CAFE_DETAILS = {
 
 /**
  * Optional logo, served from worker-app/public/. Drop a high-contrast PNG
- * there and it prints centred at the top; if the file is missing the receipt
- * renders without it rather than failing.
+ * there and set this back to its path ("/receipt-logo.png") to print it
+ * centred at the top; if the file is missing the receipt renders without it
+ * rather than failing.
+ *
+ * Currently off (removed from the bill by request) — the shop name/subtitle
+ * text above still identifies the till, this just drops the image. Nothing
+ * else on the receipt depends on it: the layout measures its own height, so
+ * turning this back on doesn't need any other change.
  *
  * Thermal printing is 1-bit: a black-on-white line-art mark reproduces well,
  * photographs and grey gradients turn to mud.
  */
-export const RECEIPT_LOGO_URL = "/receipt-logo.png";
+export const RECEIPT_LOGO_URL: string | null = null;

@@ -114,11 +114,13 @@ function deriveColumns(ctx: CanvasRenderingContext2D): Columns {
 }
 
 async function loadLogo(): Promise<HTMLImageElement | null> {
+  const url = RECEIPT_LOGO_URL;
+  if (!url) return null; // disabled — skip the fetch entirely
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null); // no logo file — print without it
-    img.src = RECEIPT_LOGO_URL;
+    img.src = url;
   });
 }
 
