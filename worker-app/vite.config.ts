@@ -10,20 +10,31 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["pwa-icon.svg"],
+      includeAssets: ["pwa-icon.svg", "icon-192.png", "icon-512.png", "icon-512-maskable.png"],
       manifest: {
-        name: "Kumbakonam POS",
-        short_name: "KPOS",
+        // Requested explicitly, replacing "Kumbakonam POS" — this is the
+        // name shown under the home-screen icon and in the Android app
+        // packaging (PWABuilder/TWA) flow.
+        name: "Kumbakonam",
+        short_name: "Kumbakonam",
+        // Stable identity separate from start_url, so the installed app
+        // survives a future start_url change without counting as a new
+        // install (PWABuilder flags a manifest with no id).
+        id: "/",
         description: "Kumbakonam Cafe — counter order & billing",
         theme_color: "#14151A",
         background_color: "#14151A",
         display: "standalone",
         orientation: "any",
         start_url: "/",
+        // PNG icons alongside the SVG — Android/TWA packaging (PWABuilder)
+        // needs real raster icons at these sizes; it doesn't accept an
+        // SVG-only manifest. See scripts/prepare-pwa-icons.mjs.
         icons: [
           { src: "pwa-icon.svg", sizes: "192x192", type: "image/svg+xml", purpose: "any" },
-          { src: "pwa-icon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "any" },
-          { src: "pwa-icon.svg", sizes: "512x512", type: "image/svg+xml", purpose: "maskable" },
+          { src: "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
