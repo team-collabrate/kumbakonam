@@ -3,15 +3,73 @@ import { formatCurrency, ProductIcon, translateItemName, useLanguage, type MenuI
 import "./MenuItemCard.css";
 
 /**
- * Item name -> photo, served from worker-app/public/items (none prepared
- * yet). Empty for now, filled in the same way CATEGORY_IMAGE was in
- * CategoryTabs.tsx once real per-item photos exist — through the same
- * prepare-*-images.mjs pipeline, mapped by name, no Firestore/Storage
- * involved. An item with no entry here falls back to its existing
- * hand-drawn icon (or letter avatar) rather than a broken image, so the
- * card works today and only improves once photos are added.
+ * Item name -> photo, served from worker-app/public/items — produced by
+ * scripts/prepare-item-images.mjs from food-images/, same pipeline
+ * CATEGORY_IMAGE used in CategoryTabs.tsx. Keyed by the exact `name`
+ * string in seed-menu.mjs; several variants of one dish (e.g. "Poori
+ * (Single)" and "Poori Set") intentionally share one photo rather than
+ * needing a separate shot per portion size.
+ *
+ * Items with no photo yet (no matching shot in food-images/, e.g. "Ghee
+ * Roast", "Horlicks", "Tamarind Rice") fall back to the existing
+ * hand-drawn icon or letter avatar — not a broken image.
  */
-const MENU_ITEM_IMAGE: Record<string, string> = {};
+const MENU_ITEM_IMAGE: Record<string, string> = {
+  Idli: "/items/idly.png",
+  Pongal: "/items/pongal.png",
+  "Poori (Single)": "/items/poori.png",
+  "Poori Set": "/items/poori.png",
+  "Chapathi (Single)": "/items/chappathi.png",
+  "Chapathi Set": "/items/chappathi.png",
+  "Idiyappam 1 Set": "/items/idiyappam.png",
+  "Kal Dosa": "/items/kal-dosa.png",
+  "Masala Dosa": "/items/masala-dosa.png",
+  "Onion Dosa": "/items/onion-dosa.png",
+  "Podi Dosa": "/items/podi-dosa.png",
+  "Onion Podi Dosa": "/items/onion-podi-dosa.png",
+
+  Meals: "/items/meals.png",
+  "Parcel Meals": "/items/meals.png",
+  "Veg Biryani": "/items/veg-briyani.png",
+  "Tomato Rice": "/items/tomato-rice.png",
+  "Lemon Rice": "/items/lemon-rice.png",
+  "Curd Rice": "/items/curd-rice.png",
+  "Sambar Rice": "/items/sambar-rice.png",
+
+  "Veg Rice": "/items/rice.png",
+  "Mushroom Noodles": "/items/noodles.png",
+  "Paneer Noodles": "/items/noodles.png",
+  Parotta: "/items/poratta.png",
+  "Kothu Parotta": "/items/kothu-porotta.png",
+  "Chilli Parotta": "/items/chilli-porotta.png",
+
+  Tea: "/items/tea.png",
+  "Black Tea": "/items/tea.png",
+  "1/2 Parcel Tea": "/items/tea.png",
+  "1 Parcel Tea": "/items/tea.png",
+  "1-1/2 Parcel Tea": "/items/tea.png",
+  Coffee: "/items/coffee.png",
+  "Parcel Coffee": "/items/coffee.png",
+  "1/2 Parcel Coffee": "/items/coffee.png",
+  "1 Parcel Coffee": "/items/coffee.png",
+  "1-1/2 Parcel Coffee": "/items/coffee.png",
+  "Sukku Coffee": "/items/sukku-coffee.png",
+  "Lemon Tea": "/items/lemon-tea.png",
+  Milk: "/items/milk.png",
+  "1 Milk": "/items/milk.png",
+  "Badam Milk": "/items/badam-milk.png",
+  "Badam Milk Parcel": "/items/badam-milk.png",
+  Boost: "/items/boost.png",
+  Water: "/items/water-bottle.png",
+  "Water Can": "/items/water-bottle.png",
+
+  Vadai: "/items/vada.png",
+  Samosa: "/items/samosa.png",
+  Bonda: "/items/bonda.png",
+  Kesari: "/items/kesari.png",
+  "Neyi Poli": "/items/boli.png",
+  Paniyaram: "/items/paniyaram.png",
+};
 
 export interface MenuItemCardProps {
   item: MenuItem;
