@@ -29,9 +29,15 @@ const BAND_ROWS = 128;
  * command stops paying for itself, and every feed is a place where the
  * layout depends on the printer's paper step rather than on our own bitmap —
  * so this stays high enough that a bill uses a handful of feeds, not dozens.
- * Measured on a real bill: 10 catches 7 runs and about 8 KB.
+ *
+ * Re-measured on a realistic 5-item split-payment bill while looking for
+ * more print-speed headroom: at the old value of 10, only 8 of the bill's 18
+ * blank runs were caught, leaving 51 rows (3.7 KB) of avoidable blank raster
+ * on the wire. 5 catches 14 of the 18 (still a handful, not dozens) and
+ * leaves only 10 rows (720 B) — pushing lower than 5 stops paying for
+ * itself fast (4 only claws back another 288 B for one more feed).
  */
-const MIN_FEED_ROWS = 10;
+const MIN_FEED_ROWS = 5;
 
 /** ESC J takes a single byte, so longer feeds go out as repeats. */
 const MAX_FEED_UNITS = 255;
