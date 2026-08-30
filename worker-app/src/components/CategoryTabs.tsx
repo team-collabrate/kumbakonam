@@ -32,7 +32,20 @@ export function CategoryTabs({ categories, activeCategory, onCategoryChange }: C
   const { language } = useLanguage();
 
   return (
-    <div className="category-tabs" role="tablist" aria-label={STRINGS.categoriesLabel[language]}>
+    <div
+      className="category-tabs"
+      role="tablist"
+      aria-label={STRINGS.categoriesLabel[language]}
+      // Equal-width columns spanning the whole row, sized to the actual
+      // category count — the previous version packed tabs to the left and
+      // left dead space after the last one; this divides the full width
+      // evenly instead, so the gap between every tab (including the last
+      // and the row's own edge) comes out the same.
+      // minmax(0, 1fr) rather than plain 1fr: a bare 1fr track won't shrink
+      // below its content's intrinsic width, which on a narrow tablet could
+      // push the grid wider than its container instead of dividing evenly.
+      style={{ gridTemplateColumns: `repeat(${categories.length}, minmax(0, 1fr))` }}
+    >
       {categories.map((category) => {
         const image = CATEGORY_IMAGE[category];
         const label = translateCategory(category, language);
@@ -48,9 +61,9 @@ export function CategoryTabs({ categories, activeCategory, onCategoryChange }: C
             onClick={() => onCategoryChange(category)}
           >
             {image && (
-              <span className="category-tabs__photo" aria-hidden="true">
-                <img src={image} alt="" width={64} height={64} loading="eager" />
-              </span>
+              // Natural cutout shape, not cropped into a circle — the photo
+              // itself is the point, not a logo treatment of it.
+              <img className="category-tabs__photo" src={image} alt="" loading="eager" />
             )}
             <span className="category-tabs__label">{label}</span>
           </button>
