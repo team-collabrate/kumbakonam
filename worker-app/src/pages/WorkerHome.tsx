@@ -203,7 +203,10 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           totalItemCount={items.length}
           loading={loading}
           error={menuError}
+          cartLines={cart.lines}
           onAddItem={cart.addItem}
+          onIncrementItem={cart.incrementQty}
+          onDecrementItem={cart.decrementQty}
         />
       </div>
 

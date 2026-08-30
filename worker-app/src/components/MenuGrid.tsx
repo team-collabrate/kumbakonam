@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { useLanguage, type MenuItem } from "@kumbakonam/shared";
 import { MenuItemCard } from "./MenuItemCard";
+import type { CartLine } from "../hooks/useCart";
 import "./MenuGrid.css";
 
 const STRINGS = {
@@ -19,7 +21,11 @@ export interface MenuGridProps {
   totalItemCount: number;
   loading: boolean;
   error: string | null;
+  /** Current cart contents — read only to look up each card's own quantity. */
+  cartLines: CartLine[];
   onAddItem: (item: MenuItem) => void;
+  onIncrementItem: (itemId: string) => void;
+  onDecrementItem: (itemId: string) => void;
 }
 
 export function MenuGrid({
@@ -27,9 +33,18 @@ export function MenuGrid({
   totalItemCount,
   loading,
   error,
+  cartLines,
   onAddItem,
+  onIncrementItem,
+  onDecrementItem,
 }: MenuGridProps) {
   const { language } = useLanguage();
+
+  const qtyByItemId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const line of cartLines) map.set(line.itemId, line.qty);
+    return map;
+  }, [cartLines]);
 
   return (
     <div className="menu-grid">
@@ -44,7 +59,15 @@ export function MenuGrid({
       ) : (
         <div className="menu-grid__items">
           {visibleItems.map((item, index) => (
-            <MenuItemCard key={item.itemId} item={item} shortcutKey={SHORTCUT_KEYS[index]} onAdd={onAddItem} />
+            <MenuItemCard
+              key={item.itemId}
+              item={item}
+              shortcutKey={SHORTCUT_KEYS[index]}
+              qty={qtyByItemId.get(item.itemId) ?? 0}
+              onAdd={onAddItem}
+              onIncrement={onIncrementItem}
+              onDecrement={onDecrementItem}
+            />
           ))}
         </div>
       )}
