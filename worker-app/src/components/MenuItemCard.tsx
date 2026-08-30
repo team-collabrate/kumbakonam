@@ -10,9 +10,10 @@ import "./MenuItemCard.css";
  * (Single)" and "Poori Set") intentionally share one photo rather than
  * needing a separate shot per portion size.
  *
- * Items with no photo yet (no matching shot in food-images/, e.g. "Ghee
- * Roast", "Horlicks", "Tamarind Rice") fall back to the existing
- * hand-drawn icon or letter avatar — not a broken image.
+ * Items with no photo yet (no matching shot in food-images/ at all, and no
+ * reasonable dish to borrow one from — e.g. "Other Snacks", "Uthappam")
+ * fall back to the existing hand-drawn icon or letter avatar — not a
+ * broken image.
  */
 const MENU_ITEM_IMAGE: Record<string, string> = {
   Idli: "/items/idly.png",
@@ -22,8 +23,15 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Chapathi (Single)": "/items/chappathi.png",
   "Chapathi Set": "/items/chappathi.png",
   "Idiyappam 1 Set": "/items/idiyappam.png",
+  // Every dosa gets a photo, including the two with no shot of their own:
+  // "Dosa / Nice Dosa" is the plain order, closest to the plain, topping-
+  // free kal dosa photo; "Ghee Roast" is a large crispy folded roast, so it
+  // borrows the masala dosa shot for its shape rather than the onion/podi
+  // photos, which show visible toppings a ghee roast doesn't have.
+  "Dosa / Nice Dosa": "/items/kal-dosa.png",
   "Kal Dosa": "/items/kal-dosa.png",
   "Masala Dosa": "/items/masala-dosa.png",
+  "Ghee Roast": "/items/masala-dosa.png",
   "Onion Dosa": "/items/onion-dosa.png",
   "Podi Dosa": "/items/podi-dosa.png",
   "Onion Podi Dosa": "/items/onion-podi-dosa.png",
@@ -36,7 +44,14 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Curd Rice": "/items/curd-rice.png",
   "Sambar Rice": "/items/sambar-rice.png",
 
+  // Every rice variety and both noodle dishes get a photo. The ones with
+  // no dedicated shot (Tamarind Rice, Mushroom Rice, Paneer Rice) reuse the
+  // plain rice.png rather than showing a letter avatar next to dishes that
+  // clearly are rice.
   "Veg Rice": "/items/rice.png",
+  "Tamarind Rice": "/items/rice.png",
+  "Mushroom Rice": "/items/rice.png",
+  "Paneer Rice": "/items/rice.png",
   "Mushroom Noodles": "/items/noodles.png",
   "Paneer Noodles": "/items/noodles.png",
   Parotta: "/items/poratta.png",
@@ -60,6 +75,7 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Badam Milk": "/items/badam-milk.png",
   "Badam Milk Parcel": "/items/badam-milk.png",
   Boost: "/items/boost.png",
+  Horlicks: "/items/milk.png",
   Water: "/items/water-bottle.png",
   "Water Can": "/items/water-bottle.png",
 
