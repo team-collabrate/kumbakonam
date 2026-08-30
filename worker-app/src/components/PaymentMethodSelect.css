@@ -1,11 +1,18 @@
+/* Two columns for four methods. At three, the fourth was orphaned on a row
+   of its own — an odd-one-out that read as a different kind of control. */
 .payment-method {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-2);
 }
 
 .payment-method__option {
-  min-height: var(--tap-target-min);
+  /* Above the 44px minimum: these are hit at speed, one-handed, mid-rush. */
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border);
   background: var(--color-surface);
@@ -17,8 +24,18 @@
   transition: transform 110ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 
-.payment-method__option:active {
+.payment-method__option:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+/* Nothing in the cart yet. Dimmed and inert rather than hidden, so the row
+   doesn't appear from nowhere the moment an item is added. */
+.payment-method.is-disabled {
+  opacity: 0.4;
+}
+
+.payment-method__option:disabled {
+  cursor: not-allowed;
 }
 
 .payment-method__option.is-selected {
@@ -32,4 +49,16 @@
   font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
   opacity: 0.6;
+}
+
+/* Press confirmed by surface, not by movement. */
+@media (prefers-reduced-motion: reduce) {
+  .payment-method__option:active:not(:disabled) {
+    transform: none;
+    background: var(--color-surface-raised);
+  }
+
+  .payment-method__option.is-selected:active:not(:disabled) {
+    background: color-mix(in srgb, var(--color-accent) 82%, #000);
+  }
 }

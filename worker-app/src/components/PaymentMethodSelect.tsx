@@ -21,12 +21,18 @@ const ARIA_LABEL = { en: "Payment method", ta: "பணம் செலுத்�
 export interface PaymentMethodSelectProps {
   value: PaymentMethod | null;
   onChange: (method: PaymentMethod) => void;
+  /** True while the cart is empty — there is nothing to pay for yet. */
+  disabled?: boolean;
 }
 
-export function PaymentMethodSelect({ value, onChange }: PaymentMethodSelectProps) {
+export function PaymentMethodSelect({ value, onChange, disabled = false }: PaymentMethodSelectProps) {
   const { language } = useLanguage();
   return (
-    <div className="payment-method" role="radiogroup" aria-label={ARIA_LABEL[language]}>
+    <div
+      className={`payment-method ${disabled ? "is-disabled" : ""}`}
+      role="radiogroup"
+      aria-label={ARIA_LABEL[language]}
+    >
       {METHODS.map((method) => (
         <button
           key={method.value}
@@ -34,6 +40,7 @@ export function PaymentMethodSelect({ value, onChange }: PaymentMethodSelectProp
           role="radio"
           aria-checked={value === method.value}
           className={`payment-method__option ${value === method.value ? "is-selected" : ""}`}
+          disabled={disabled}
           onClick={() => onChange(method.value)}
         >
           {method.label[language]} <span className="payment-method__key">({method.key})</span>

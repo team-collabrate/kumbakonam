@@ -4,7 +4,14 @@
 :root {
   /* ---- Colour ---- */
   --color-accent: #e8674f;
-  --color-accent-contrast: #ffffff;
+  /* Deep warm brown, not white. White on this terracotta is 3.24:1 — under
+     the 4.5 that 16px bold needs — and it sits on the most-pressed control
+     in the app (Print Bill, the selected payment method, selected category
+     tabs). Darkening the accent instead would have fixed the label at the
+     cost of the brand colour the Design Brief specifies; darkening the
+     label keeps the colour and scores better: 5.53:1. Tuned to the accent's
+     own hue rather than a flat black. */
+  --color-accent-contrast: #231310;
   --color-success: #6fcf97;
   --color-warning: #f2c94c;
   --color-danger: #d64545;

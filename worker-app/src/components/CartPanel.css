@@ -11,7 +11,6 @@
 .cart-panel__header {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-5) var(--space-4) var(--space-3);
 }
@@ -23,34 +22,83 @@
   letter-spacing: var(--tracking-title);
 }
 
+/* How many things are on the bill, next to the heading it belongs to.
+   Pushes Clear to the far edge without a spacer element. */
+.cart-panel__count {
+  margin-right: auto;
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .cart-panel__clear {
-  border: none;
+  min-height: var(--tap-target-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
   background: transparent;
   color: var(--color-text-muted);
   font-size: var(--text-footnote);
   font-weight: 600;
   cursor: pointer;
-  padding: var(--space-1) 0;
-  transition: transform 110ms var(--ease-out), color 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
 }
 
+/* Destructive, so it earns its colour only once the finger is on it —
+   not as a permanent red invitation sitting beside the heading. */
 .cart-panel__clear:active {
-  transform: scale(0.95);
+  border-color: var(--color-danger);
   color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
 }
 
 .cart-panel__lines {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 0 var(--space-4);
 }
 
+/* Only the empty state centres. A list must stay top-aligned or items would
+   drift down the panel as they are added. */
+.cart-panel__lines.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .cart-panel__empty {
-  color: var(--color-text-muted);
-  font-size: var(--text-body);
-  line-height: var(--leading-body);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
   padding: var(--space-5) 0;
-  max-width: 26ch;
+  max-width: 24ch;
+}
+
+/* Drawn, not an emoji: emoji render differently on every platform and can't
+   take a theme colour. */
+.cart-panel__empty-mark {
+  width: 48px;
+  height: 48px;
+  color: var(--color-border);
+  margin-bottom: var(--space-1);
+}
+
+.cart-panel__empty-title {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.cart-panel__empty-hint {
+  margin: 0;
+  font-size: var(--text-footnote);
+  line-height: var(--leading-body);
+  color: var(--color-text-muted);
 }
 
 .cart-panel__list {
@@ -64,20 +112,21 @@
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .cart-panel__totals {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .cart-panel__totals > div {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: var(--text-body);
-  color: var(--color-text-muted);
-  margin: var(--space-1) 0;
+  gap: var(--space-3);
 }
 
 .cart-panel__totals dt,
@@ -89,12 +138,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* How the total is being settled — a note about the figure below, not
+   another amount owed. */
+.cart-panel__note-row {
+  font-size: var(--text-footnote);
+  color: var(--color-text-muted);
+}
+
 /* The one number the worker and the customer both look at. */
 .cart-panel__total-row {
-  color: var(--color-text) !important;
   padding-top: var(--space-3);
-  margin-top: var(--space-2) !important;
   border-top: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
 .cart-panel__total-row dt {
@@ -126,7 +181,7 @@
 }
 
 .cart-panel__submit {
-  min-height: 60px;
+  min-height: 64px;
   border-radius: var(--radius-md);
   border: none;
   background: var(--color-accent);
@@ -136,7 +191,8 @@
   letter-spacing: var(--tracking-body);
   cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: transform 110ms var(--ease-out), box-shadow 160ms var(--ease-out), opacity 160ms ease;
+  transition: transform 110ms var(--ease-out), box-shadow 160ms var(--ease-out),
+    background-color 160ms ease, color 160ms ease;
 }
 
 .cart-panel__submit:active:not(:disabled) {
@@ -144,16 +200,33 @@
   box-shadow: none;
 }
 
-.cart-panel__submit:disabled {
-  opacity: 0.35;
+/* Waiting on the worker, not broken. A dimmed accent button reads as a
+   failure; a plain outline reads as a step not finished yet — and the label
+   says which step. */
+.cart-panel__submit.is-waiting {
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  color: var(--color-text-muted);
   box-shadow: none;
+  font-weight: 600;
+}
+
+.cart-panel__submit:disabled {
   cursor: not-allowed;
 }
 
-/* Split breakdown, shown under the total once Split is the payment method.
-   Indented and lighter than the total so it reads as a note about how the
-   total is being settled, not as another amount owed. */
-.cart-panel__split-row {
-  font-size: var(--text-footnote) !important;
-  padding-left: var(--space-3);
+/* Only the genuinely inert case — mid-save — dims. */
+.cart-panel__submit:disabled:not(.is-waiting) {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+/* The theme's stance is that movement goes and colour feedback stays, but a
+   press scale is still movement. Swap it for a surface change so the press
+   is still confirmed without anything travelling. */
+@media (prefers-reduced-motion: reduce) {
+  .cart-panel__submit:active:not(:disabled) {
+    transform: none;
+    background: color-mix(in srgb, var(--color-accent) 82%, #000);
+  }
 }
