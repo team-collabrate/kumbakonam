@@ -31,6 +31,14 @@ const MESSAGES = {
   needCustomer: { en: "Choose who this credit bill is for.", ta: "இந்த கடன் பில் யாருக்கு என்று தேர்ந்தெடுக்கவும்." },
   saveFailed: { en: "Could not save the order. Please try again.", ta: "ஆர்டரை சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்." },
   saved: { en: "Order saved.", ta: "ஆர்டர் சேமிக்கப்பட்டது." },
+  // Rare: an order queued while offline reached the server later and was
+  // rejected there (e.g. the worker account it was filed under got
+  // deactivated in the meantime). The bill has already been printed by
+  // then, so this can only warn after the fact, not prevent it.
+  syncRejected: {
+    en: "An earlier order failed to sync — check with the owner.",
+    ta: "முந்தைய ஆர்டர் ஒத்திசைவு தோல்வியடைந்தது — உரிமையாளரிடம் சரிபார்க்கவும்.",
+  },
 };
 
 export function useOrderSubmit(
@@ -82,7 +90,18 @@ export function useOrderSubmit(
       const isSplit = cart.paymentMethod === "split";
       const credit = cart.paymentMethod === "credit" ? cart.creditCustomer : null;
 
-      const { orderId } = await createOrder({
+      // Deliberately not awaited: createOrder() hands back orderId/ref the
+      // instant the write is queued in Firestore's local cache, which is
+      // what "works offline" actually depends on. Awaiting its `synced`
+      // promise here would block this whole function — including printing
+      // the bill and clearing the cart below — until the write reaches the
+      // server, which per the Firestore SDK's documented behaviour never
+      // happens while offline. That used to be exactly what this line did
+      // (`await createOrder(...)`), silently defeating the offline design:
+      // the "Print Bill" button would sit on "Saving…" indefinitely with a
+      // real network outage, instead of completing immediately the way an
+      // offline-first POS has to.
+      const { orderId, synced } = createOrder({
         items,
         subtotal: cart.subtotal,
         // The cafe gives no discounts. The field stays on the document so
@@ -96,6 +115,11 @@ export function useOrderSubmit(
         ...(credit ? { customerId: credit.customerId, customerName: credit.name } : {}),
         workerId,
       });
+      // Background-only: logs a real write failure (e.g. offline the whole
+      // shift and the app closed before reconnecting) without gating
+      // anything above on it. watchOrderSyncStatus below is what actually
+      // drives the visible pending/rejected state.
+      synced.catch((err) => console.error(`Order ${orderId} failed to reach the server`, err));
 
       if (credit) {
         // Deliberately not awaited, and separate from the order write: an
@@ -109,8 +133,20 @@ export function useOrderSubmit(
       setPendingOrderIds((ids) => [...ids, orderId]);
       const unsubscribe = watchOrderSyncStatus(
         orderId,
-        (isPending) => {
-          if (!isPending) {
+        (state) => {
+          if (state.rejected) {
+            // The queued write reached the server and was turned down there
+            // (see OrderSyncState.rejected) — this is not the same as
+            // "synced", even though it's also no longer pending. The bill
+            // is already in the customer's hand by now; all that's left is
+            // to say so rather than quietly counting it as done.
+            console.error(`Order ${orderId} was rejected by the server after syncing.`);
+            setPendingOrderIds((ids) => ids.filter((id) => id !== orderId));
+            setError(MESSAGES.syncRejected[language]);
+            unsubscribe();
+            return;
+          }
+          if (!state.isPending) {
             setPendingOrderIds((ids) => ids.filter((id) => id !== orderId));
             unsubscribe();
           }

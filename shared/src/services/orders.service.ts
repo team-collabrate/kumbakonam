@@ -38,23 +38,41 @@ export interface CreateOrderInput {
 export interface CreateOrderResult {
   orderId: string;
   ref: DocumentReference;
+  /**
+   * Resolves once Firestore confirms the write reached the server —
+   * useful for logging/telemetry, but do NOT await this to decide whether
+   * to proceed with the UI (print the bill, clear the cart). Per the
+   * Firestore Web SDK's own documented behaviour, this promise does not
+   * resolve at all while the device is offline, so awaiting it here would
+   * silently undo the "works offline" design this function's doc comment
+   * promises: `orderId`/`ref` are already final and usable the moment this
+   * function returns, because the local write lands in Firestore's cache
+   * (and the UI reflects it) synchronously with the `setDoc()` call below,
+   * not when the network round-trip finishes.
+   */
+  synced: Promise<void>;
 }
 
 /**
  * Writes the order via Firestore's local cache first (optimistic — works
  * offline per TDD §4/§8). `syncedAt` starts null; call `markOrderSynced`
  * once the write is confirmed (e.g. from a `hasPendingWrites` listener).
+ *
+ * Deliberately NOT an `async function` returning a single write-completion
+ * promise — see `synced` above for why. `orderId`/`ref` come back the
+ * instant the local doc ref and optimistic cache write exist, not once the
+ * server has acknowledged them.
  */
-export async function createOrder(input: CreateOrderInput): Promise<CreateOrderResult> {
+export function createOrder(input: CreateOrderInput): CreateOrderResult {
   const db = getFirestoreDb();
   const ref = doc(collection(db, COLLECTION));
-  await setDoc(ref, {
+  const synced = setDoc(ref, {
     ...input,
     status: "completed",
     syncedAt: null,
     createdAt: serverTimestamp(),
-  });
-  return { orderId: ref.id, ref };
+  }).then(() => undefined);
+  return { orderId: ref.id, ref, synced };
 }
 
 /** Marks the order confirmed-written; called once Firestore reports the write left the local queue. */
@@ -63,10 +81,25 @@ export async function markOrderSynced(orderId: string): Promise<void> {
   await updateDoc(doc(db, COLLECTION, orderId), { syncedAt: serverTimestamp() });
 }
 
+export interface OrderSyncState {
+  isPending: boolean;
+  /**
+   * True when the local write has cleared the queue but the document
+   * doesn't exist server-side — i.e. it was rejected once it actually
+   * reached the server (most likely by the `orders create` security rule,
+   * e.g. a worker deactivated while an order sat queued offline). A
+   * genuinely-synced order can never hit this, since it exists precisely
+   * because the write it came from succeeded. Callers must not treat
+   * `!isPending` alone as "synced" — a rejected write also stops being
+   * pending, just not by succeeding.
+   */
+  rejected: boolean;
+}
+
 /** Watches a single just-created order and calls back once it's no longer pending a local write. */
 export function watchOrderSyncStatus(
   orderId: string,
-  onSyncStateChange: (isPending: boolean) => void,
+  onSyncStateChange: (state: OrderSyncState) => void,
   onError?: (error: FirestoreError) => void,
 ): Unsubscribe {
   const db = getFirestoreDb();
@@ -74,7 +107,10 @@ export function watchOrderSyncStatus(
     doc(db, COLLECTION, orderId),
     { includeMetadataChanges: true },
     (snap) => {
-      onSyncStateChange(snap.metadata.hasPendingWrites);
+      onSyncStateChange({
+        isPending: snap.metadata.hasPendingWrites,
+        rejected: !snap.metadata.hasPendingWrites && !snap.exists(),
+      });
     },
     onError,
   );

@@ -7,6 +7,13 @@
   color: var(--color-text);
 }
 
+.owner-home__status-bar {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-4) 0;
+}
+
 .owner-home__content {
   flex: 1;
   overflow-y: auto;
