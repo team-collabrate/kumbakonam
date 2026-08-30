@@ -21,9 +21,9 @@
 }
 
 .sidebar__icon-btn {
-  /* Flex rather than relying on a button's own text centring: these are
-     emoji, whose glyph metrics and line box vary by platform font, and
-     which drift off-centre vertically when left to the default line-height. */
+  /* Flex rather than relying on a button's own content centring — kept even
+     now that the icons are SVG, since the caption below (on three of these)
+     still needs the same treatment. */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,9 +35,8 @@
   border: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text-muted);
-  font-size: 18px;
   cursor: pointer;
-  transition: transform 120ms var(--ease-out), background-color 150ms ease;
+  transition: transform 120ms var(--ease-out), background-color 150ms ease, color 150ms ease;
 }
 
 .sidebar__icon-btn:active {
@@ -45,27 +44,31 @@
   transform: scale(0.92);
 }
 
-/* Language / khata / spend: icon on top, a one-word caption underneath.
-   Grows downward (height), never outward — the column stays 44px wide like
-   every other icon button here, so it can't be what pushes the sidebar's
-   own fixed width. */
-.sidebar__icon-btn--labeled {
-  flex-direction: column;
-  gap: 1px;
-  height: auto;
-  min-height: var(--tap-target-min);
-  padding: 6px 2px 5px;
+.sidebar__icon-btn svg {
+  width: 19px;
+  height: 19px;
+  flex: none;
 }
 
-.sidebar__icon-glyph {
-  font-size: 16px;
-  line-height: 1;
+/* Language / khata / spend: icon on top, a one-word caption underneath —
+   two distinct lines, not the icon and its label sharing one baseline the
+   way an emoji-with-adjacent-text would. Grows downward (height), never
+   outward — the column stays 44px wide like every other icon button here,
+   so it can't be what pushes the sidebar's own fixed width. */
+.sidebar__icon-btn--labeled {
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  height: auto;
+  min-height: var(--tap-target-min);
+  padding: 7px 2px 6px;
 }
 
 .sidebar__icon-caption {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.01em;
+  line-height: 1;
   color: var(--color-text-muted);
   font-family: "Noto Sans Tamil", "Nirmala UI", "Latha", sans-serif;
 }

@@ -18,9 +18,15 @@ export type MenuCategory = (typeof MENU_CATEGORIES)[number];
  * instead of vanishing.
  */
 const CATEGORY_LABELS: Record<string, Record<Language, string>> = {
-  Breakfast: { en: "Breakfast", ta: "காலை உணவு" },
-  Lunch: { en: "Lunch", ta: "மதிய உணவு" },
-  Dinner: { en: "Dinner", ta: "இரவு உணவு" },
+  // "உணவு" (meal/food) dropped from all three — a tab is a short label,
+  // not a sentence, and "காலை" on its own already reads as "morning" the
+  // way the English tab reads "Breakfast" rather than "Morning Meal".
+  Breakfast: { en: "Breakfast", ta: "காலை" },
+  // "மதியம்" (noon), not a truncation of "மதிய உணவு" down to "மதிய" — that
+  // would leave the adjective form ("of noon") standing alone with nothing
+  // left for it to describe.
+  Lunch: { en: "Lunch", ta: "மதியம்" },
+  Dinner: { en: "Dinner", ta: "இரவு" },
   Tea: { en: "Tea", ta: "தேநீர்" },
   Vadai: { en: "Vadai", ta: "வடை" },
 

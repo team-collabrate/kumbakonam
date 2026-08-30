@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ConfirmDialog, SyncStatusBadge, useLanguage, type SyncStatus } from "@kumbakonam/shared";
+import { KhataIcon, LanguageIcon, LogoutIcon, PrinterIcon, ReceiptIcon } from "./SidebarIcons";
 import "./Sidebar.css";
 
 export interface SidebarProps {
@@ -60,9 +61,7 @@ export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinter
           aria-label={STRINGS.language[language]}
           title={STRINGS.language[language]}
         >
-          <span className="sidebar__icon-glyph" aria-hidden="true">
-            🌐
-          </span>
+          <LanguageIcon />
           <span className="sidebar__icon-caption">{CAPTION.language}</span>
         </button>
         <button
@@ -72,9 +71,7 @@ export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinter
           aria-label={STRINGS.khata[language]}
           title={STRINGS.khata[language]}
         >
-          <span className="sidebar__icon-glyph" aria-hidden="true">
-            📒
-          </span>
+          <KhataIcon />
           <span className="sidebar__icon-caption">{CAPTION.khata}</span>
         </button>
         <button
@@ -84,9 +81,7 @@ export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinter
           aria-label={STRINGS.expenses[language]}
           title={STRINGS.expenses[language]}
         >
-          <span className="sidebar__icon-glyph" aria-hidden="true">
-            💸
-          </span>
+          <ReceiptIcon />
           <span className="sidebar__icon-caption">{CAPTION.expenses}</span>
         </button>
         <button
@@ -95,7 +90,7 @@ export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinter
           onClick={onOpenPrinterSetup}
           aria-label={STRINGS.printerSetup[language]}
         >
-          🖨
+          <PrinterIcon />
         </button>
         <button
           type="button"
@@ -103,7 +98,7 @@ export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinter
           onClick={() => setConfirmingLogout(true)}
           aria-label={STRINGS.logOut[language]}
         >
-          ⏻
+          <LogoutIcon />
         </button>
       </div>
 
