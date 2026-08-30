@@ -6,10 +6,10 @@
     "kumbakonam-pos": {
       "hosting": {
         "worker": [
-          "kumbakonam-pos-worker"
+          "kumbakonam-pos"
         ],
         "owner": [
-          "kumbakonam-pos-owner"
+          "kumbakonam-admin"
         ]
       }
     }
