@@ -135,7 +135,21 @@
   box-sizing: border-box;
 }
 
-html,
+/* Anchors the whole app's height to the viewport that's actually visible
+   right now, not the tallest one the browser could ever show. Mobile Chrome
+   computes a bare 100vh against the viewport with its own address bar
+   *hidden* — while the bar is showing (e.g. on first load, before an
+   installed-PWA launch strips it away), the real visible area is shorter,
+   so an element sized to 100vh runs off the bottom of the screen. 100dvh
+   (Chrome 108+, which this Android/Chrome-only PWA already requires)
+   tracks the true visible viewport instead; the 100% line above it is the
+   fallback for anything that doesn't understand dvh — an unsupported value
+   is simply dropped, so it never overrides the working one. */
+html {
+  height: 100%;
+  height: 100dvh;
+}
+
 body,
 #root {
   height: 100%;

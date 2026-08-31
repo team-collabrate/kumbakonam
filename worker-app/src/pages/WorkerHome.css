@@ -2,7 +2,11 @@
   display: grid;
   grid-template-columns: 76px 1fr 400px;
   grid-template-areas: "sidebar menu cart";
+  /* See the html rule in theme.css for why this is two lines, not one —
+     same fix, applied here too since this sets its own explicit height
+     rather than inheriting the corrected one. */
   height: 100vh;
+  height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
 }
@@ -49,10 +53,12 @@
     grid-template-areas: "sidebar" "menu" "cart";
     height: auto;
     min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .worker-home__cart {
     height: 60vh;
+    height: 60dvh;
   }
 }
 

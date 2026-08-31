@@ -2,7 +2,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  /* See the html rule in shared/src/ui/theme.css — same fix, applied here
+     too since this sets its own explicit height rather than inheriting
+     the corrected one. */
   height: 100vh;
+  height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
 }
