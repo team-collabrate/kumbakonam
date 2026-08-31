@@ -148,11 +148,21 @@
 html {
   height: 100%;
   height: 100dvh;
+  /* Kills Chrome's native pull-to-refresh. Both apps sync over realtime
+     Firestore listeners, so there's never a reason to manually refresh —
+     and the gesture was doing real harm: dragging down anywhere near the
+     top of a scrolled-to-top view reloaded the whole page, wiping the
+     in-memory PIN session and dropping the worker back at the lock
+     screen mid-order. `none`, not `contain` — `contain` still lets the
+     browser attempt the gesture at this outermost element, it only stops
+     it chaining further up (nothing to chain to here, this *is* the top). */
+  overscroll-behavior-y: none;
 }
 
 body,
 #root {
   height: 100%;
+  overscroll-behavior-y: none;
 }
 
 html {

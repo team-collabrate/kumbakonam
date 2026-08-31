@@ -42,6 +42,53 @@ const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
   "touchstart",
 ];
 
+// Persists the PIN session across a page reload — without this, sessionUser
+// was pure in-memory React state, so *any* reload (a pull-to-refresh drag,
+// Android reclaiming a backgrounded PWA's memory, the service worker
+// updating) dropped the worker straight back to the PIN screen regardless
+// of how recently they'd typed it in, even though the 30-minute inactivity
+// timeout below says that should still count as "logged in". Keyed by role
+// so a stored owner session (shouldn't happen — separate origins per app —
+// but cheap to guard) is never read back as a worker one or vice versa.
+// try/catched: private-browsing storage restrictions degrade to today's
+// in-memory-only behaviour instead of crashing the provider.
+const STORAGE_KEY = "kumbakonam.session";
+
+interface StoredSession {
+  user: SessionUser;
+  lastActivityAt: number;
+}
+
+function readStoredSession(expectedRole: UserRole): SessionUser | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const stored = JSON.parse(raw) as StoredSession;
+    if (stored.user.role !== expectedRole) return null;
+    if (Date.now() - stored.lastActivityAt >= INACTIVITY_TIMEOUT_MS) return null;
+    return stored.user;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(user: SessionUser): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ user, lastActivityAt: Date.now() } satisfies StoredSession));
+  } catch {
+    // Storage unavailable (private mode, quota) — session still works for
+    // this load, it just won't survive a reload. Not worth surfacing.
+  }
+}
+
+function clearStoredSession(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* nothing to clean up if it never wrote */
+  }
+}
+
 export interface SessionContextValue {
   /**
    * True once anonymous auth completes. Informational only now (drives the
@@ -72,7 +119,9 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
   const languageRef = useRef(language);
   languageRef.current = language;
   const [ready, setReady] = useState(false);
-  const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  // Lazy initializer — runs once, synchronously, before first paint, so a
+  // reload within the inactivity window never even flashes the PIN screen.
+  const [sessionUser, setSessionUser] = useState<SessionUser | null>(() => readStoredSession(expectedRole));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,6 +160,7 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
   const logout = useCallback(() => {
     setSessionUser(null);
     setError(null);
+    clearStoredSession();
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, []);
 
@@ -141,6 +191,7 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
           return;
         }
         setSessionUser(user);
+        writeStoredSession(user);
       } catch (err) {
         console.error("PIN login failed", err);
         setError(MESSAGES.loginFailed[language]);
@@ -158,6 +209,13 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
     const resetTimer = () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       timeoutRef.current = setTimeout(logout, INACTIVITY_TIMEOUT_MS);
+      // Keeps the persisted timestamp rolling forward with real activity —
+      // without this, a reload after 25 minutes of continuous, active use
+      // would read back a stale login-time timestamp and (wrongly) still
+      // count it as "recent enough", or conversely require re-storing on
+      // every login only. Cheap: these are discrete tap/key events, not a
+      // continuous stream like scroll or mousemove.
+      writeStoredSession(sessionUser);
     };
 
     resetTimer();
