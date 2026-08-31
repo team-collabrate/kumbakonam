@@ -7,7 +7,7 @@ import {
   printToDevice,
   requestPrinter,
   type PrinterConnection,
-  type PrintChunkProgress,
+  type PrintEvent,
 } from "../printing/webBluetoothPrinter";
 
 export type PrinterStatus = "unsupported" | "checking" | "unpaired" | "connecting" | "ready" | "error";
@@ -25,6 +25,12 @@ export interface PrintProgress {
   kbPerSec: number;
   /** null until at least one chunk has gone out — nothing to extrapolate from yet. */
   etaMs: number | null;
+  /** How many times the printer has refused the current chunk size and
+   *  forced a smaller one (see CHUNK_FALLBACKS in webBluetoothPrinter.ts).
+   *  A print that's much slower than CHUNK_SIZE/CHUNK_DELAY_MS alone would
+   *  predict is usually this — most of the receipt going out in much
+   *  smaller pieces than configured, not the configured delay itself. */
+  fallbackCount: number;
 }
 
 export interface UsePrinterResult {
@@ -71,6 +77,7 @@ export function usePrinter(): UsePrinterResult {
   const logsRef = useRef<string[]>([]);
   const lastFlushRef = useRef(0);
   const lastChunkIndexRef = useRef(0);
+  const fallbackCountRef = useRef(0);
 
   useEffect(() => {
     if (!isWebBluetoothSupported()) {
@@ -115,16 +122,37 @@ export function usePrinter(): UsePrinterResult {
       logsRef.current = [`[PRINT START] Size: ${(data.length / 1024).toFixed(1)} KB`];
       lastFlushRef.current = 0;
       lastChunkIndexRef.current = 0;
+      fallbackCountRef.current = 0;
       setPrintLogs(logsRef.current);
-      setPrintProgress({ chunkIndex: 0, bytesSent: 0, totalBytes: data.length, elapsedMs: 0, kbPerSec: 0, etaMs: null });
+      setPrintProgress({
+        chunkIndex: 0,
+        bytesSent: 0,
+        totalBytes: data.length,
+        elapsedMs: 0,
+        kbPerSec: 0,
+        etaMs: null,
+        fallbackCount: 0,
+      });
 
-      const onProgress = (chunk: PrintChunkProgress) => {
-        lastChunkIndexRef.current = chunk.chunkIndex;
-        logsRef.current.push(`Chunk ${chunk.chunkIndex}: ${chunk.chunkBytes} bytes sent`);
+      const onProgress = (event: PrintEvent) => {
+        if (event.kind === "fallback") {
+          fallbackCountRef.current += 1;
+          logsRef.current.push(`[RETRY] ${event.fromSize}-byte write refused; falling back to ${event.toSize} bytes`);
+          // Rare and diagnostically important — always flush immediately
+          // rather than waiting for the next throttled tick, unlike the
+          // routine per-chunk case below.
+          lastFlushRef.current = performance.now();
+          setPrintLogs([...logsRef.current]);
+          setPrintProgress((prev) => (prev ? { ...prev, fallbackCount: fallbackCountRef.current } : prev));
+          return;
+        }
 
-        const seconds = chunk.elapsedMs / 1000;
-        const kbPerSec = seconds > 0 ? chunk.bytesSent / 1024 / seconds : 0;
-        const remainingBytes = chunk.totalBytes - chunk.bytesSent;
+        lastChunkIndexRef.current = event.chunkIndex;
+        logsRef.current.push(`Chunk ${event.chunkIndex}: ${event.chunkBytes} bytes sent`);
+
+        const seconds = event.elapsedMs / 1000;
+        const kbPerSec = seconds > 0 ? event.bytesSent / 1024 / seconds : 0;
+        const remainingBytes = event.totalBytes - event.bytesSent;
         const etaMs = kbPerSec > 0 ? (remainingBytes / 1024 / kbPerSec) * 1000 : null;
 
         // Real-time, but throttled — see UI_FLUSH_INTERVAL_MS above. The
@@ -132,17 +160,18 @@ export function usePrinter(): UsePrinterResult {
         // so the on-screen numbers never lag behind a print that already
         // finished.
         const now = performance.now();
-        const isLastChunk = chunk.bytesSent >= chunk.totalBytes;
+        const isLastChunk = event.bytesSent >= event.totalBytes;
         if (isLastChunk || now - lastFlushRef.current >= UI_FLUSH_INTERVAL_MS) {
           lastFlushRef.current = now;
           setPrintLogs([...logsRef.current]);
           setPrintProgress({
-            chunkIndex: chunk.chunkIndex,
-            bytesSent: chunk.bytesSent,
-            totalBytes: chunk.totalBytes,
-            elapsedMs: chunk.elapsedMs,
+            chunkIndex: event.chunkIndex,
+            bytesSent: event.bytesSent,
+            totalBytes: event.totalBytes,
+            elapsedMs: event.elapsedMs,
             kbPerSec,
             etaMs,
+            fallbackCount: fallbackCountRef.current,
           });
         }
       };
@@ -156,8 +185,13 @@ export function usePrinter(): UsePrinterResult {
 
         const elapsedMs = performance.now() - printStartedAt;
         const kbPerSec = elapsedMs > 0 ? data.length / 1024 / (elapsedMs / 1000) : 0;
+        // fallbackCount, not chunk count, is the honest explanation when
+        // this is much slower than CHUNK_SIZE/CHUNK_DELAY_MS alone would
+        // predict — worth it right on the completion line, not just
+        // buried in the per-event log above.
         logsRef.current.push(
-          `[COMPLETE] ${data.length} bytes in ${Math.round(elapsedMs)}ms = ${kbPerSec.toFixed(1)} KB/s`,
+          `[COMPLETE] ${data.length} bytes in ${Math.round(elapsedMs)}ms = ${kbPerSec.toFixed(1)} KB/s` +
+            (fallbackCountRef.current > 0 ? ` (${fallbackCountRef.current} chunk-size fallback(s))` : ""),
         );
         setPrintLogs([...logsRef.current]);
         setPrintProgress({
@@ -167,6 +201,7 @@ export function usePrinter(): UsePrinterResult {
           elapsedMs,
           kbPerSec,
           etaMs: 0,
+          fallbackCount: fallbackCountRef.current,
         });
         return true;
       } catch (err) {

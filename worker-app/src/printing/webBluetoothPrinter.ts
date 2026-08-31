@@ -182,18 +182,34 @@ export function getPrinterName(connection: PrinterConnection): string {
   return connection.device.name ?? "Bluetooth printer";
 }
 
-/** Reported after every chunk write, for usePrinter's on-screen speed
+/** Reported after every chunk write (and every time the printer rejects one
+ *  and forces a smaller chunk size), for usePrinter's on-screen speed
  *  display — see that hook for why this is a callback rather than an
  *  event stream: it needs to run synchronously in step with the loop
- *  below, not buffered and replayed after the fact. */
-export interface PrintChunkProgress {
-  chunkIndex: number;
-  chunkBytes: number;
-  bytesSent: number;
-  totalBytes: number;
-  /** Since printToDevice() started, not since this specific chunk. */
-  elapsedMs: number;
-}
+ *  below, not buffered and replayed after the fact.
+ *
+ *  The "fallback" case used to only reach console.warn — invisible on the
+ *  tablet itself, which defeats the point of a speed overlay built
+ *  specifically so nobody needs DevTools at the counter. A print that's
+ *  much slower than the chunk size/delay alone would predict is usually
+ *  this: the printer refused the configured chunk size and every
+ *  remaining byte went out in much smaller pieces instead. */
+export type PrintEvent =
+  | {
+      kind: "chunk";
+      chunkIndex: number;
+      chunkBytes: number;
+      bytesSent: number;
+      totalBytes: number;
+      /** Since printToDevice() started, not since this specific chunk. */
+      elapsedMs: number;
+    }
+  | {
+      kind: "fallback";
+      fromSize: number;
+      toSize: number;
+      elapsedMs: number;
+    };
 
 /**
  * Sends the ESC/POS byte stream to the printer, chunked to fit BLE writes.
@@ -206,7 +222,7 @@ export interface PrintChunkProgress {
 export async function printToDevice(
   connection: PrinterConnection,
   data: Uint8Array,
-  onProgress?: (progress: PrintChunkProgress) => void,
+  onProgress?: (event: PrintEvent) => void,
 ): Promise<PrinterConnection> {
   // BLE links drop when the printer sleeps or wanders out of range; silently
   // reconnecting is far better counter UX than an error the worker can't act on.
@@ -245,6 +261,7 @@ export async function printToDevice(
       offset += chunk.length;
       chunkIndex += 1;
       onProgress?.({
+        kind: "chunk",
         chunkIndex,
         chunkBytes: chunk.length,
         bytesSent: offset,
@@ -255,6 +272,7 @@ export async function printToDevice(
       const next = CHUNK_FALLBACKS.find((candidate) => candidate < size);
       if (next === undefined) throw err; // already as small as BLE allows
       console.warn(`Printer refused a ${size}-byte write; retrying at ${next}.`);
+      onProgress?.({ kind: "fallback", fromSize: size, toSize: next, elapsedMs: performance.now() - startedAt });
       size = next;
     }
   }

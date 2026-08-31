@@ -54,6 +54,12 @@
   margin-bottom: var(--space-2);
 }
 
+.print-diag__fallback {
+  color: var(--color-warning);
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
 .print-diag__log {
   max-height: 110px;
   overflow-y: auto;

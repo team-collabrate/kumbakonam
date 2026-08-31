@@ -12,6 +12,7 @@ const STRINGS = {
   chunk: { en: "Chunk", ta: "பகுதி" },
   remaining: { en: "remaining", ta: "மீதம்" },
   done: { en: "Done", ta: "முடிந்தது" },
+  fallback: { en: "size drops", ta: "அளவு குறைப்புகள்" },
 };
 
 const fmtMs = (ms: number) => (ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`);
@@ -53,6 +54,18 @@ export function PrintDiagnosticsOverlay({ progress, logs }: PrintDiagnosticsOver
               : "…"}
         </span>
       </div>
+
+      {/* Only shown when it's actually happened — a print that's much
+          slower than the configured chunk size/delay predicts is usually
+          this: the printer refusing the configured size and most of the
+          receipt going out in much smaller pieces instead. Surfaced as
+          its own line, not left buried in the log below, since it's the
+          single most likely answer to "why is this slower than expected". */}
+      {progress.fallbackCount > 0 && (
+        <div className="print-diag__fallback">
+          ⚠ {progress.fallbackCount} {STRINGS.fallback[language]}
+        </div>
+      )}
 
       {/* Tail of the raw log, not the whole thing — at ~128B chunks a real
           receipt is 300-400+ lines, which would be unreadable as a wall of
