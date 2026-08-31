@@ -186,10 +186,14 @@ export async function printToDevice(
   // Uint8Array is generic over its buffer since TS 5.7, and BufferSource
   // rejects the SharedArrayBuffer case — so this has to be the narrow form
   // that `data.slice()` actually returns, not a bare Uint8Array.
-  const write = (chunk: Uint8Array<ArrayBuffer>) =>
-    canWriteWithResponse
-      ? characteristic.writeValueWithResponse(chunk)
-      : characteristic.writeValueWithoutResponse(chunk).then(() => sleep(CHUNK_DELAY_MS));
+  const write = async (chunk: Uint8Array<ArrayBuffer>) => {
+    if (canWriteWithResponse) {
+      await characteristic.writeValueWithResponse(chunk);
+    } else {
+      await characteristic.writeValueWithoutResponse(chunk);
+    }
+    await sleep(CHUNK_DELAY_MS);
+  };
 
   // Starts optimistic and only shrinks. Once a size is known to work on this
   // link it is kept for the rest of the receipt, so a printer that needs
