@@ -242,9 +242,9 @@ function paint(
   }
 
   // --- Order meta ---------------------------------------------------------
-  y += 14;
+  y += 24;
   ctx.font = font(24);
-  y += 26;
+  y += 32;
   const metaY = y;
   // Date on the left, clock on the right of the same line — the two together
   // were one long left-aligned string that left the right half of the paper
@@ -262,12 +262,12 @@ function paint(
     ctx.fillText(`${L.billNo}: ${bill.billNo}`, CONTENT_LEFT, billNoY);
   });
 
-  y += 14;
+  y += 20;
   draw(() => dashedRule(ctx, y));
 
   // --- Column headers -----------------------------------------------------
   ctx.font = font(HEADER_SIZE, "bold");
-  y += 30;
+  y += 40;
   const headY = y;
   draw(() => {
     ctx.textAlign = "left";
@@ -287,7 +287,7 @@ function paint(
   for (const item of bill.items) {
     ctx.textAlign = "left";
     const lines = wrap(ctx, item.name, col.itemMax);
-    y += 30;
+    y += 40;
     const firstLineY = y;
     draw(() => ctx.fillText(lines[0], CONTENT_LEFT, firstLineY));
 
@@ -324,16 +324,11 @@ function paint(
   draw(() => dashedRule(ctx, y));
 
   // --- Totals -------------------------------------------------------------
+  // Subtotal dropped — the cafe gives no discounts, so it always equalled
+  // the total anyway and just repeated the one figure that matters (same
+  // reasoning the on-screen cart panel already applied to its own totals).
   ctx.font = font(26);
-  y += 34;
-  draw(() => {
-    ctx.textAlign = "left";
-    ctx.fillText(`${L.subtotal}:`, CONTENT_LEFT, y);
-    ctx.textAlign = "right";
-    ctx.fillText(money(bill.subtotal), col.amountRight, y);
-  });
-
-  y += 46;
+  y += 56;
   draw(() => {
     ctx.font = font(40, "bold");
     ctx.textAlign = "left";
@@ -345,7 +340,7 @@ function paint(
   });
 
   ctx.font = font(24);
-  y += 34;
+  y += 44;
   draw(() => {
     ctx.textAlign = "left";
     ctx.fillText(`${L.payment}: ${bill.paymentLabel}`, CONTENT_LEFT, y);
@@ -393,9 +388,10 @@ function paint(
     });
   }
 
-  // Blank tail so the tear-off edge clears the last line. Kept short because
-  // the cut sequence already feeds three lines past this point — anything
-  // more here is paper and transfer time spent printing nothing.
-  y += 16;
+  // Blank tail so the tear-off edge clears the last line — widened along
+  // with the rest of the layout above. The cut sequence already feeds
+  // three lines past this point on top of it, so this is on top of that
+  // margin, not instead of it.
+  y += 40;
   return Math.ceil(y);
 }
