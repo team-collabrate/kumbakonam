@@ -23,6 +23,7 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Chapathi (Single)": "/items/chappathi.png",
   "Chapathi Set": "/items/chappathi.png",
   "Idiyappam 1 Set": "/items/idiyappam.png",
+  "Idiyappam 1": "/items/idiyappam.png",
   // Every dosa gets a photo, including the two with no shot of their own:
   // "Dosa / Nice Dosa" is the plain order, closest to the plain, topping-
   // free kal dosa photo; "Ghee Roast" is a large crispy folded roast, so it
@@ -64,9 +65,16 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
 
   Tea: "/items/tea.png",
   "Black Tea": "/items/tea.png",
+  "Black Tea 1 Parcel": "/items/tea.png",
+  "Black Tea 1/2 Parcel": "/items/tea.png",
   "1/2 Parcel Tea": "/items/tea.png",
   "1 Parcel Tea": "/items/tea.png",
   "1-1/2 Parcel Tea": "/items/tea.png",
+  // No dedicated shot for the country-sugar variant — same cup either way,
+  // just a different sugar, so the plain tea photo is the honest stand-in
+  // rather than leaving these two blank.
+  "Naatu Sakarai 1 Parcel": "/items/tea.png",
+  "Naatu Sakarai 1/2 Parcel": "/items/tea.png",
   Coffee: "/items/coffee.png",
   "Parcel Coffee": "/items/coffee.png",
   "1/2 Parcel Coffee": "/items/coffee.png",
@@ -76,6 +84,7 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Lemon Tea": "/items/lemon-tea.png",
   Milk: "/items/milk.png",
   "1 Milk": "/items/milk.png",
+  "Milk 1/2 Parcel": "/items/milk.png",
   "Badam Milk": "/items/badam-milk.png",
   "Badam Milk Parcel": "/items/badam-milk.png",
   Boost: "/items/boost.png",
@@ -91,6 +100,12 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   Kesari: "/items/kesari.png",
   "Neyi Poli": "/items/boli.png",
   Paniyaram: "/items/paniyaram.png",
+  // No shot of any of these three yet — nothing in food-images/ resembles
+  // them closely enough to borrow, unlike the reused photos above. They're
+  // plain text cards (menu-item-card--no-photo) until a real photo shows up.
+  // "Kali": ...,
+  // "Mochai": ...,
+  // "Paasi Payiru": ...,
 };
 
 export interface MenuItemCardProps {
