@@ -16,15 +16,20 @@
   color: var(--color-warning);
 }
 
+/* A fixed 4-per-row looked right on a desktop-width preview, but on a real
+   1280px tablet with the sidebar and cart panel taking their share, that
+   left each card only ~180px wide — and after MenuItemCard's own
+   right-hand padding for the qty button, barely 90px for the name to
+   actually read in. Tamil names truncated to two or three letters (see the
+   card's own comment for the real gap that panel eats). auto-fill instead
+   asks for a minimum comfortable width and lets the grid work out how many
+   columns actually fit that — 3 on the tablet this was reported from, back
+   up to 4+ on anything wider, and it degrades on its own on a narrower
+   screen instead of needing its own breakpoint (which is what the old
+   560px override was doing by hand). */
 .menu-grid__items {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
   gap: var(--space-3);
   padding-top: var(--space-2);
-}
-
-@media (max-width: 560px) {
-  .menu-grid__items {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
