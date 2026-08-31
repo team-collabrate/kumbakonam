@@ -105,18 +105,21 @@ function packRaster(canvas: HTMLCanvasElement): {
  *        between heat pulses. Lower is close to free speed, since it
  *        barely touches darkness the way n2 does.
  *
- * Tuned down from the common factory default (7, 80, 2) to a moderate cut
- * — n3 first, since it costs the least in print quality, then a real but
- * not extreme cut to n2. This is exactly the "Print Mode: Normal / Strict"
- * kind of dial other POS software exposes as a setting, not a constant,
- * because the right value is printer-specific and nobody here has one to
- * test against. If bills start printing too faint or patchy to read,
- * raise HEATING_TIME back toward 80 first — that's the one actually
- * trading quality for speed; HEATING_INTERVAL is safe to leave low.
+ * Tuned down from the common factory default (7, 80, 2). n3 (HEATING_INTERVAL)
+ * is now at its floor — 0, no dead time between heat pulses at all — which
+ * is still the safe one to leave there; it barely touches darkness the way
+ * n2 does. n2 (HEATING_TIME) has been cut twice now: 80 -> 50 -> 30, chasing
+ * the XP-Q600's speed target past the point this comment used to warn
+ * about crossing. This is exactly the "Print Mode: Normal / Strict" kind
+ * of dial other POS software exposes as a setting, not a constant, because
+ * the right value is printer-specific and nobody here has one to test
+ * against directly. If bills start printing too faint or patchy to read,
+ * HEATING_TIME is the one to raise back up — try 50 again before going
+ * further past 30.
  */
 const MAX_HEATING_DOTS = 7;
-const HEATING_TIME = 50;
-const HEATING_INTERVAL = 1;
+const HEATING_TIME = 30;
+const HEATING_INTERVAL = 0;
 
 export interface RasterReceiptOptions {
   /** Feed + full cut after printing. Printers without a cutter ignore it. */
