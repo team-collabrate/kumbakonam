@@ -17,7 +17,11 @@ export function App() {
         title="Kumbakonam POS"
         subtitle={ready ? STRINGS.subtitleReady[language] : STRINGS.subtitleConnecting[language]}
         onSubmit={login}
-        loading={loading || !ready}
+        // Not gated on `ready` — the keypad accepts input immediately;
+        // login() itself waits for the same readiness internally, so the
+        // background handshake happens while the worker is still typing
+        // instead of freezing the keypad before they're allowed to start.
+        loading={loading}
         error={error}
       />
     );

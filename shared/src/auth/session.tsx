@@ -43,7 +43,14 @@ const ACTIVITY_EVENTS: Array<keyof WindowEventMap> = [
 ];
 
 export interface SessionContextValue {
-  /** null until anonymous auth completes; login is disabled until then. */
+  /**
+   * True once anonymous auth completes. Informational only now (drives the
+   * "Connecting…" vs "Enter your PIN" subtitle) — it no longer gates
+   * whether the PIN pad accepts input. `login()` itself waits for the same
+   * readiness internally, so typing can start immediately and the network
+   * round-trip happens while the worker is still tapping digits, not
+   * before they're allowed to.
+   */
   ready: boolean;
   sessionUser: SessionUser | null;
   loading: boolean;
@@ -74,17 +81,30 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
   // complete before a PIN lookup query is allowed to run. Runs once on
   // mount regardless of later language changes (languageRef avoids
   // re-triggering sign-in just because the toggle was flipped).
+  //
+  // This used to also be what the PIN pad's own `disabled` state waited
+  // on — every launch, the worker stared at a frozen keypad for however
+  // long this round-trip took, even though nothing about *typing* a PIN
+  // needs it done yet. readyPromiseRef exists so `login()` can await this
+  // internally instead: typing is never blocked, and by the time four
+  // digits are tapped in, this has usually already resolved in the
+  // background, so the wait most people actually feel is close to zero.
+  const readyPromiseRef = useRef<Promise<void>>(Promise.resolve());
+
   useEffect(() => {
     const auth = getFirebaseAuth();
     if (auth.currentUser) {
       setReady(true);
       return;
     }
-    signInAnonymously(auth)
-      .then(() => setReady(true))
+    readyPromiseRef.current = signInAnonymously(auth)
+      .then(() => {
+        setReady(true);
+      })
       .catch((err: unknown) => {
         console.error("Anonymous sign-in failed", err);
         setError(MESSAGES.connectFailed[languageRef.current]);
+        throw err; // so anyone awaiting readyPromiseRef also sees the failure
       });
   }, []);
 
@@ -103,6 +123,17 @@ export function SessionProvider({ children, expectedRole }: SessionProviderProps
       setLoading(true);
       setError(null);
       try {
+        // Waits here, not before the worker was allowed to start typing.
+        // In the common case this is already resolved by now; kept as its
+        // own try/catch so a sign-in failure keeps the specific
+        // "can't reach the server" message the effect above set, rather
+        // than falling through to the generic one below.
+        try {
+          await readyPromiseRef.current;
+        } catch {
+          setError(MESSAGES.connectFailed[language]);
+          return;
+        }
         const pinHash = await hashPin(pin);
         const user = await findUserByPinHash(pinHash, expectedRole);
         if (!user) {
