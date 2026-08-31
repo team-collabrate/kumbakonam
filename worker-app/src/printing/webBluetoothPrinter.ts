@@ -62,16 +62,14 @@ const CHUNK_SIZE = 512;
 const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
 /** Cheap printers have small input buffers; a gap between chunks stops them
- *  overflowing and printing garbage halfway down the receipt. Left at 0 —
- *  with writeValueWithoutResponse preferred again (see write() below,
- *  chosen for real-hardware speed: writeValueWithResponse measured 15s on
- *  the XP-Q600, its ACK turnaround being the actual bottleneck), there is
- *  no acknowledgement providing backpressure either, so this constant is
- *  now the *only* pacing on this path — genuinely riskier than it was
- *  while write-with-response was preferred, not just "unchanged". If
- *  receipts come out garbled or with missing sections, this is the first
- *  thing to raise (10, then 15, then 20) before touching CHUNK_SIZE. */
-const CHUNK_DELAY_MS = 0;
+ *  overflowing and printing garbage halfway down the receipt. Raised from
+ *  0 to 10 — real print at 0 with writeValueWithoutResponse preferred
+ *  (see write() below) came back with text missing from the receipt, the
+ *  predicted failure mode for that combination: with no ACK, there is no
+ *  delivery guarantee at all, so a dropped write is just gone, not
+ *  retried or reported. This is the first step of the documented
+ *  fallback (10, then 15, then 20) before touching CHUNK_SIZE. */
+const CHUNK_DELAY_MS = 10;
 
 export interface PrinterConnection {
   device: BluetoothDevice;
