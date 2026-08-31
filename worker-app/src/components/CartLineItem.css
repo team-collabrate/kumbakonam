@@ -44,33 +44,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-.cart-line__stepper {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-.cart-line__stepper button {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  transition: transform 120ms var(--ease-out), background-color 120ms ease;
-}
-
-.cart-line__stepper button:active {
-  background: var(--color-surface-raised);
-  transform: scale(0.9);
-}
-
+/* Plain count now, not a control — see the component's own comment for
+   why (the menu card already owns +/− for this item). Sits ahead of the
+   name, the way "2x" reads on a paper bill, rather than trailing it where
+   the interactive stepper used to sit. */
 .cart-line__qty {
-  min-width: 22px;
-  text-align: center;
+  flex: none;
+  min-width: 28px;
+  color: var(--color-text-muted);
   font-weight: 700;
   font-size: var(--text-body);
   font-variant-numeric: tabular-nums;

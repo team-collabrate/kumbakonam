@@ -114,13 +114,7 @@ export function CartPanel({
         ) : (
           <ul className="cart-panel__list">
             {cart.lines.map((line) => (
-              <CartLineItem
-                key={line.itemId}
-                line={line}
-                onIncrement={cart.incrementQty}
-                onDecrement={cart.decrementQty}
-                onRemove={cart.removeLine}
-              />
+              <CartLineItem key={line.itemId} line={line} onRemove={cart.removeLine} />
             ))}
           </ul>
         )}

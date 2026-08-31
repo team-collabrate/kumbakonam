@@ -181,7 +181,11 @@
 }
 
 .cart-panel__submit {
-  min-height: 64px;
+  /* Was 64px — the tallest thing in the panel by a wide margin, more so
+     once the payment buttons above it came down to 44px. Still clearly
+     the primary action (bigger than those, and still well above the
+     44px tap-target floor), just no longer disproportionate. */
+  min-height: 52px;
   border-radius: var(--radius-md);
   border: none;
   background: var(--color-accent);
