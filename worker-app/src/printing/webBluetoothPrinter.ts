@@ -25,31 +25,31 @@ const KNOWN_PRINTER_SERVICES: string[] = [
  * A receipt with a logo is ~50 KB: at 180 bytes that is 300+ round trips and
  * a visible wait at the counter, which is what staff were feeling.
  *
- * History on this value: 512 (the largest value an ATT attribute can hold)
- * was the starting point, overran the printer's input buffer even with a
- * delay in place, dropped to 128 (+ CHUNK_DELAY_MS raised to 50ms), then
- * climbed back through 512 with the delay cut to 0, chasing a ~5s print
+ * History on this value: started at 512 (the largest value an ATT attribute
+ * can hold), overran the printer's input buffer even with a delay in place,
+ * dropped to 128 (+ CHUNK_DELAY_MS raised to 50ms), climbed back through
+ * 512 with the delay cut to 0, then past it to 1024 chasing a ~5s print
  * target on the XP-Q600.
  *
- * Now past 512 entirely, to 1024 — which is NOT a valid single-PDU size
- * for writeValueWithoutResponse (see write() below, now forced onto that
- * path unconditionally): a "write without response" is one unacknowledged
- * ATT packet, capped by the negotiated MTU (typically well under 512, often
- * under 200), with no long-write splitting the way writeValueWithResponse
- * gets. The very first 1024-byte write is expected to be refused outright,
- * which is fine — CHUNK_FALLBACKS below exists exactly to absorb that,
- * stepping down to 512 and probably further from there. This value mostly
- * exists now as the ceiling that first rejection steps down from, not a
- * size expected to actually transmit.
+ * Back down to 512 — the real platform ceiling, not a tuning choice. This
+ * came out of decompiling the old native app (vpos) to see how it printed
+ * to the same hardware: it used classic Bluetooth (RFCOMM/SPP, a plain
+ * OutputStream) and sent the *entire* receipt in one write() call, no
+ * chunking, no delay, at all — something only possible because a raw
+ * serial socket has no per-message size limit; the OS handles
+ * fragmentation and flow control underneath it. Web Bluetooth cannot open
+ * that kind of socket at all (BLE/GATT only, a hard browser restriction,
+ * not a setting), and a GATT write is capped at 512 bytes *by the
+ * browser*, full stop, regardless of what's passed in — 1024 was never
+ * transmitting as 1024, it was failing every single write and immediately
+ * stepping down through CHUNK_FALLBACKS to 512 anyway. Setting it to 512
+ * directly just stops paying for that guaranteed-to-fail first attempt on
+ * every print.
  *
  * If receipts come out garbled or with missing sections, CHUNK_DELAY_MS is
- * still the fallback to raise first (10, then 15, then 20) — but see
- * write()'s own comment: with the printer forced onto
- * writeValueWithoutResponse now, a rejected write can no longer be
- * silently mistaken for a delivered one the way a truly fire-and-forget
- * write (one that swallows its own errors) would risk.
+ * the fallback to raise first (10, then 15, then 20).
  */
-const CHUNK_SIZE = 1024;
+const CHUNK_SIZE = 512;
 
 /**
  * Progressively smaller writes to fall back to, ending at the 20 bytes a
@@ -62,19 +62,17 @@ const CHUNK_SIZE = 1024;
 const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
 /** Cheap printers have small input buffers; a gap between chunks stops them
- *  overflowing and printing garbage halfway down the receipt. Cut to 0 now
- *  (was 5, was 50 before that) chasing the XP-Q600's ~5s print target —
- *  jumped here without confirming whether 5ms itself printed clean, so if
- *  this garbles, that's not yet evidence 5ms would have too. See
- *  CHUNK_SIZE's comment above for the step-back-up plan (10, then 15, then
- *  20) if a delay turns out to be necessary after all.
- *
- *  At 0 this only matters for a printer using writeValueWithoutResponse
- *  (see write() below) — with writeValueWithResponse, each write already
- *  blocks on the printer's own ACK before the next one goes out, so that
- *  path was never truly back-to-back regardless of this value; without a
- *  response, this was the *only* pacing between chunks, so 0 here removes
- *  whatever protection it was providing on that path entirely. */
+ *  overflowing and printing garbage halfway down the receipt. Left at 0 —
+ *  matches the old native app (vpos), which never added an artificial
+ *  delay either; its single classic-Bluetooth write had nothing to pace
+ *  between, since there was only ever one write. Here, with
+ *  writeValueWithResponse preferred again (see write() below), each write
+ *  already blocks on the printer's own ACK before the next one goes out,
+ *  which is the real analog to what let the old app get away with zero
+ *  delay: something is already providing backpressure, just not this
+ *  constant. If receipts come out garbled or with missing sections, this
+ *  is still the first thing to raise (10, then 15, then 20) before
+ *  touching CHUNK_SIZE again. */
 const CHUNK_DELAY_MS = 0;
 
 export interface PrinterConnection {
@@ -224,19 +222,16 @@ export type PrintEvent =
 /**
  * Sends the ESC/POS byte stream to the printer, chunked to fit BLE writes.
  *
- * Forces writeValueWithoutResponse regardless of what the printer's
- * characteristic actually advertises — no more preferring
- * writeValueWithResponse's ACK for flow control (a printer that only
- * supports write-with-response will now just fail every write and get
- * stepped down through CHUNK_FALLBACKS instead, same as any other
- * rejection). Requested as "aggressive fire-and-forget" tuning; see write()
- * below for one deliberate change from that request's literal shape —
- * failures still surface to the retry/fallback path rather than being
- * swallowed, since silently dropping a rejected chunk would mean bytes
- * missing from the middle of a receipt with zero indication why, on top of
- * defeating the fallback mechanism CHUNK_SIZE=1024 (over the 512-byte ATT
- * max — see that constant's own comment) is likely to need on the very
- * first write.
+ * Prefers writeValueWithResponse again (was forced onto
+ * writeValueWithoutResponse unconditionally for a round of "aggressive
+ * fire-and-forget" tuning) — waiting for the printer's own ACK is the
+ * closest BLE equivalent to what let the old native app (vpos) get away
+ * with a single unchunked write and zero delay: a classic-Bluetooth
+ * RFCOMM socket has the OS's own flow control built in underneath it: it
+ * silently blocks/paces the caller as needed. GATT has no such built-in
+ * mechanism — writeValueWithResponse's ACK is the nearest thing to it;
+ * writeValueWithoutResponse has none, so a printer that supports both
+ * genuinely needs one or the other to get any backpressure at all.
  *
  * Returns the connection actually used, since a dropped link is
  * re-established here and yields fresh GATT objects the caller should
@@ -255,22 +250,17 @@ export async function printToDevice(
   }
 
   const { characteristic } = active;
+  const canWriteWithResponse = characteristic.properties.write;
 
   // Uint8Array is generic over its buffer since TS 5.7, and BufferSource
   // rejects the SharedArrayBuffer case — so this has to be the narrow form
   // that `data.slice()` actually returns, not a bare Uint8Array.
-  //
-  // Awaited, not "fired and forgotten" at the JS level — a genuinely
-  // un-awaited call here would let the loop below race ahead issuing every
-  // remaining write in the same tick, and would resolve write() (and so
-  // report every chunk as "sent" via onProgress) before the browser has
-  // even handed the bytes to the Bluetooth stack, making the speed overlay
-  // read a meaningless near-zero time. What's actually gone versus
-  // writeValueWithResponse is the printer's own acknowledgement — this
-  // promise settles once Chrome has queued the write, not once the
-  // printer has processed it.
   const write = async (chunk: Uint8Array<ArrayBuffer>) => {
-    await characteristic.writeValueWithoutResponse(chunk);
+    if (canWriteWithResponse) {
+      await characteristic.writeValueWithResponse(chunk);
+    } else {
+      await characteristic.writeValueWithoutResponse(chunk);
+    }
     await sleep(CHUNK_DELAY_MS);
   };
 

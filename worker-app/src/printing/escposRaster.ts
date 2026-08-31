@@ -89,37 +89,23 @@ function packRaster(canvas: HTMLCanvasElement): {
 }
 
 /**
- * ESC 7 (print density/speed) — everything up to here (chunking, blank-run
- * skipping) only shortens how much data the printer has to *receive*. This
- * is the one lever left that shortens what it physically has to *do*: how
- * long the head dwells on each heated dot before moving to the next line.
- * That dwell time is the printer's own default until told otherwise, and
- * ESC/POS printers commonly ship set for maximum darkness rather than
- * speed — never sending this command at all means paying that cost on
- * every single bill without ever having asked for it.
+ * ESC 7 (print density/speed) used to be sent here, tuning heating
+ * dots/time/interval away from the printer's factory default in three
+ * rounds (80/2 -> 50/1 -> 30/0) chasing the XP-Q600's speed target.
  *
- *   n1 = max heating dots per line, in units of 8 ((n1+1)*8 dots).
- *   n2 = heating time per dot, in 10µs units — the main darkness/speed
- *        knob. Lower prints faster and lighter.
- *   n3 = heating interval between dots, in 10µs units — pure dead time
- *        between heat pulses. Lower is close to free speed, since it
- *        barely touches darkness the way n2 does.
+ * Removed entirely — not tuned back to the factory default, just not sent
+ * at all — after decompiling the old native app (vpos) that printed to the
+ * same hardware: it never sends this command either. It gets whatever
+ * darkness/speed the printer ships with and never asked for anything else.
+ * If that was good enough for it, there's no reason to keep guessing at a
+ * better set of numbers with no way to see the paper from here — every
+ * value tried so far was picked blind, since nobody in this loop has the
+ * physical printer to check legibility against.
  *
- * Tuned down from the common factory default (7, 80, 2). n3 (HEATING_INTERVAL)
- * is now at its floor — 0, no dead time between heat pulses at all — which
- * is still the safe one to leave there; it barely touches darkness the way
- * n2 does. n2 (HEATING_TIME) has been cut twice now: 80 -> 50 -> 30, chasing
- * the XP-Q600's speed target past the point this comment used to warn
- * about crossing. This is exactly the "Print Mode: Normal / Strict" kind
- * of dial other POS software exposes as a setting, not a constant, because
- * the right value is printer-specific and nobody here has one to test
- * against directly. If bills start printing too faint or patchy to read,
- * HEATING_TIME is the one to raise back up — try 50 again before going
- * further past 30.
+ * If speed still needs work after this, the honest next step is someone
+ * with the printer in hand trying real ESC 7 values and reporting what's
+ * still legible — not another guess pushed from here.
  */
-const MAX_HEATING_DOTS = 7;
-const HEATING_TIME = 30;
-const HEATING_INTERVAL = 0;
 
 export interface RasterReceiptOptions {
   /** Feed + full cut after printing. Printers without a cutter ignore it. */
@@ -136,7 +122,6 @@ export function buildRasterReceipt(
 
   const chunks: Uint8Array[] = [
     new Uint8Array([ESC, 0x40]), // initialise
-    new Uint8Array([ESC, 0x37, MAX_HEATING_DOTS, HEATING_TIME, HEATING_INTERVAL]),
     // Pin the motion units to 1/203 inch so ESC J below feeds exact dot rows.
     // Without this the feed height depends on the printer's default vertical
     // unit, and a blank gap could come out taller or shorter than the bitmap
