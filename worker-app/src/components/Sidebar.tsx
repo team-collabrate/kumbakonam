@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { ConfirmDialog, SyncStatusBadge, useLanguage, type SyncStatus } from "@kumbakonam/shared";
 import { KhataIcon, LanguageIcon, LogoutIcon, PrinterIcon, ReceiptIcon } from "./SidebarIcons";
+import { WorkerNameSelect } from "./WorkerNameSelect";
 import "./Sidebar.css";
 
 export interface SidebarProps {
   syncStatus: SyncStatus;
+  /** Who's on shift — printed on the bill. Separate from the signed-in account (see useActiveWorkerName). */
+  activeWorkerName: string;
+  onChangeWorkerName: (name: string) => void;
   onOpenKhata: () => void;
   onOpenExpenses: () => void;
   onOpenPrinterSetup: () => void;
@@ -40,7 +44,15 @@ const CAPTION = {
 };
 
 /** Thin icon sidebar (Design Brief §5) — sync status, language, credit book, spending, printer, logout. */
-export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinterSetup, onLogout }: SidebarProps) {
+export function Sidebar({
+  syncStatus,
+  activeWorkerName,
+  onChangeWorkerName,
+  onOpenKhata,
+  onOpenExpenses,
+  onOpenPrinterSetup,
+  onLogout,
+}: SidebarProps) {
   const { language, toggleLanguage } = useLanguage();
   const [confirmingLogout, setConfirmingLogout] = useState(false);
 
@@ -54,6 +66,11 @@ export function Sidebar({ syncStatus, onOpenKhata, onOpenExpenses, onOpenPrinter
       <SyncStatusBadge status={syncStatus} compact />
 
       <div className="sidebar__actions">
+        {/* Who's on shift — worth the same top-of-stack placement as sync
+            status, since it's the one thing worth checking before taking
+            the first order of a shift. */}
+        <WorkerNameSelect value={activeWorkerName} onChange={onChangeWorkerName} />
+
         <button
           type="button"
           className="sidebar__icon-btn sidebar__icon-btn--labeled"

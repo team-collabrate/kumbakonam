@@ -19,6 +19,7 @@ import { CreditCustomerModal } from "../components/CreditCustomerModal";
 import { KhataModal } from "../components/KhataModal";
 import { useMenu } from "../hooks/useMenu";
 import { useMenuCategories } from "../hooks/useMenuCategories";
+import { useActiveWorkerName } from "../hooks/useActiveWorkerName";
 import { useCart } from "../hooks/useCart";
 import { useOrderSubmit } from "../hooks/useOrderSubmit";
 import { usePrinter } from "../hooks/usePrinter";
@@ -43,6 +44,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const { language } = useLanguage();
   const { items, loading, error: menuError } = useMenu();
   const { categories, activeCategory, setActiveCategory, cycleCategory, visibleItems } = useMenuCategories(items);
+  const [activeWorkerName, setActiveWorkerName] = useActiveWorkerName();
   const cart = useCart();
   const printer = usePrinter();
   const online = useOnlineStatus();
@@ -78,7 +80,11 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
     [printer],
   );
 
-  const orderSubmit = useOrderSubmit(cart, sessionUser.userId, sessionUser.name, handleOrderSaved);
+  // workerId still comes from the signed-in account (orders.workerId must
+  // reference a real, active user per firestore.rules); workerName is just
+  // what prints on the bill, and that's the pickable one — see
+  // useActiveWorkerName.
+  const orderSubmit = useOrderSubmit(cart, sessionUser.userId, activeWorkerName, handleOrderSaved);
 
   const syncStatus: SyncStatus = !online ? "offline" : orderSubmit.pendingCount > 0 ? "pending" : "online";
 
@@ -167,6 +173,8 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
     <div className="worker-home" data-theme="dark">
       <Sidebar
         syncStatus={syncStatus}
+        activeWorkerName={activeWorkerName}
+        onChangeWorkerName={setActiveWorkerName}
         onOpenKhata={openKhata}
         onOpenExpenses={openExpenses}
         onOpenPrinterSetup={openPrinterSetup}

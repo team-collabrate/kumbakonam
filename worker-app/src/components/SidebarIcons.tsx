@@ -1,12 +1,12 @@
 /**
- * The sidebar's five icons, hand-drawn rather than emoji.
+ * The sidebar's six icons, hand-drawn rather than emoji.
  *
  * Emoji glyphs render differently per platform/font (the same worry
  * ProductIcon was built to avoid for menu items), can't take a stroke
  * colour, and don't share a weight with each other — a 🌐 next to a 🖨
  * next to a ⏻ are three different visual styles glued together, not one
  * icon set. These are one grid (24x24), one stroke width, one line style,
- * so the five read as a family regardless of platform.
+ * so the six read as a family regardless of platform.
  */
 
 const BASE = {
@@ -46,6 +46,16 @@ export function ReceiptIcon() {
     <svg {...BASE}>
       <path d="M6 3h12v17.3l-1.7-1.1-1.7 1.1-1.6-1.1-1.7 1.1-1.6-1.1-1.7 1.1L6 19.3V3z" />
       <path d="M9 8.2h6M9 12h6" />
+    </svg>
+  );
+}
+
+/** Active worker — who's on shift, shown on the printed bill. */
+export function WorkerIcon() {
+  return (
+    <svg {...BASE}>
+      <circle cx="12" cy="8" r="3.4" />
+      <path d="M5.2 19.5c0-3.7 3-6 6.8-6s6.8 2.3 6.8 6" />
     </svg>
   );
 }
