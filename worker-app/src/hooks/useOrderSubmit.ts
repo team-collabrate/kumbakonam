@@ -12,7 +12,9 @@ import type { UseCartResult } from "./useCart";
 import { paymentLabelForReceipt, splitBreakdownForReceipt, type BillInput } from "../printing/receipt";
 
 export interface UseOrderSubmitResult {
-  submit: () => Promise<void>;
+  /** `print` defaults to true (the Enter shortcut and the Print button both
+   *  want that). Pass `false` for the Save button — same write, no receipt. */
+  submit: (print?: boolean) => Promise<void>;
   submitting: boolean;
   error: string | null;
   successMessage: string | null;
@@ -42,7 +44,7 @@ export function useOrderSubmit(
   cart: UseCartResult,
   workerId: string,
   workerName: string,
-  onSaved: (bill: BillInput) => void,
+  onSaved: (bill: BillInput, print: boolean) => void,
 ): UseOrderSubmitResult {
   const { language } = useLanguage();
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +57,7 @@ export function useOrderSubmit(
     if (successTimerRef.current) clearTimeout(successTimerRef.current);
   }, []);
 
-  const submit = useCallback(async () => {
+  const submit = useCallback(async (print = true) => {
     if (cart.isEmpty) {
       setError(MESSAGES.needItem[language]);
       return;
@@ -197,7 +199,7 @@ export function useOrderSubmit(
           : {}),
         workerName,
         createdAt: new Date(),
-      });
+      }, print);
 
       cart.clearCart();
       setSuccessMessage(MESSAGES.saved[language]);

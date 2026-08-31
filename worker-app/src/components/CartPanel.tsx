@@ -6,8 +6,6 @@ import { PaymentMethodSelect } from "./PaymentMethodSelect";
 import "./CartPanel.css";
 
 const STRINGS = {
-  title: { en: "Current Order", ta: "தற்போதைய ஆர்டர்" },
-  clearCart: { en: "Clear", ta: "காலி செய்" },
   clearTitle: { en: "Clear cart?", ta: "கார்ட்டை காலி செய்யவா?" },
   clearMessage: {
     en: "This removes every item from the current order. This can't be undone.",
@@ -16,13 +14,12 @@ const STRINGS = {
   clearConfirm: { en: "Clear Cart", ta: "கார்ட்டை காலி செய்" },
   emptyTitle: { en: "No items yet", ta: "இன்னும் பொருட்கள் இல்லை" },
   empty: { en: "Tap a menu item to add it.", ta: "சேர்க்க ஒரு மெனு பொருளைத் தட்டவும்." },
-  item: { en: "item", ta: "பொருள்" },
-  items: { en: "items", ta: "பொருட்கள்" },
   total: { en: "Total", ta: "மொத்தம்" },
   gpay: { en: "GPay", ta: "GPay" },
   onAccount: { en: "On account", ta: "கடன்" },
   cash: { en: "Cash", ta: "ரொக்கம்" },
   saving: { en: "Saving…", ta: "சேமிக்கிறது…" },
+  save: { en: "Save", ta: "சேமி" },
   printBill: { en: "Print Bill", ta: "பில் அச்சிடு" },
   needItems: { en: "Add items to start", ta: "பொருட்களைச் சேர்க்கவும்" },
   needPayment: { en: "Choose how to pay", ta: "பணம் செலுத்தும் முறையைத் தேர்வுசெய்" },
@@ -31,9 +28,9 @@ const STRINGS = {
 export interface CartPanelProps {
   cart: UseCartResult;
   orderSubmit: UseOrderSubmitResult;
-  /** Lifted to WorkerHome so the Backspace/Delete keyboard shortcut can trigger the same confirm dialog. */
+  /** Set by the Backspace/Delete keyboard shortcut — there's no on-screen
+   *  Clear button any more, but the confirm dialog it opens still shows here. */
   confirmingClear: boolean;
-  onRequestClear: () => void;
   onCancelClear: () => void;
   /** Lifted to WorkerHome so the S shortcut and the button both open the split dialog. */
   onSelectPayment: (method: PaymentMethod) => void;
@@ -43,13 +40,10 @@ export function CartPanel({
   cart,
   orderSubmit,
   confirmingClear,
-  onRequestClear,
   onCancelClear,
   onSelectPayment,
 }: CartPanelProps) {
   const { language } = useLanguage();
-
-  const itemCount = cart.lines.reduce((sum, line) => sum + line.qty, 0);
 
   /**
    * What's stopping the order going through. Used as the button's own label
@@ -65,20 +59,6 @@ export function CartPanel({
 
   return (
     <div className="cart-panel">
-      <div className="cart-panel__header">
-        <h2>{STRINGS.title[language]}</h2>
-        {!cart.isEmpty && (
-          <>
-            <span className="cart-panel__count">
-              {itemCount} {itemCount === 1 ? STRINGS.item[language] : STRINGS.items[language]}
-            </span>
-            <button type="button" className="cart-panel__clear" onClick={onRequestClear}>
-              {STRINGS.clearCart[language]}
-            </button>
-          </>
-        )}
-      </div>
-
       {confirmingClear && (
         <ConfirmDialog
           title={STRINGS.clearTitle[language]}
@@ -157,22 +137,50 @@ export function CartPanel({
         </dl>
 
         {/* Errors interrupt; a success line does not. role=alert on both would
-            make every saved order shout at a screen reader. */}
-        <div
-          className={`cart-panel__status ${orderSubmit.error ? "is-error" : orderSubmit.successMessage ? "is-success" : ""}`}
-          role={orderSubmit.error ? "alert" : "status"}
-        >
-          {orderSubmit.error ?? orderSubmit.successMessage ?? " "}
-        </div>
+            make every saved order shout at a screen reader. Only mounted
+            when there's something to say — an empty placeholder here used
+            to reserve a fixed 18px plus a gap on each side permanently,
+            which read as the dead space under the total. */}
+        {(orderSubmit.error || orderSubmit.successMessage) && (
+          <div
+            className={`cart-panel__status ${orderSubmit.error ? "is-error" : "is-success"}`}
+            role={orderSubmit.error ? "alert" : "status"}
+          >
+            {orderSubmit.error ?? orderSubmit.successMessage}
+          </div>
+        )}
 
-        <button
-          type="button"
-          className={`cart-panel__submit ${blocker ? "is-waiting" : ""}`}
-          onClick={orderSubmit.submit}
-          disabled={orderSubmit.submitting || Boolean(blocker)}
-        >
-          {submitLabel}
-        </button>
+        <div className="cart-panel__actions">
+          <button
+            type="button"
+            className="cart-panel__save"
+            onClick={() => orderSubmit.submit(false)}
+            disabled={orderSubmit.submitting || Boolean(blocker)}
+            aria-label={STRINGS.save[language]}
+            title={STRINGS.save[language]}
+          >
+            {/* Rounded download-into-tray mark — records the order without
+                sending anything to the printer. */}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 4v10M8 10l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 16v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          <button
+            type="button"
+            className={`cart-panel__print ${blocker ? "is-waiting" : ""}`}
+            onClick={() => orderSubmit.submit(true)}
+            disabled={orderSubmit.submitting || Boolean(blocker)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9V3h12v6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <rect x="4" y="9" width="16" height="8" rx="2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M6 17v4h12v-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span>{submitLabel}</span>
+          </button>
+        </div>
       </div>
     </div>
   );

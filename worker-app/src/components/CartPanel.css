@@ -8,56 +8,14 @@
   box-shadow: var(--shadow-md);
 }
 
-.cart-panel__header {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  padding: var(--space-5) var(--space-4) var(--space-3);
-}
-
-.cart-panel__header h2 {
-  margin: 0;
-  font-size: var(--text-title-3);
-  font-weight: 700;
-  letter-spacing: var(--tracking-title);
-}
-
-/* How many things are on the bill, next to the heading it belongs to.
-   Pushes Clear to the far edge without a spacer element. */
-.cart-panel__count {
-  margin-right: auto;
-  font-size: var(--text-footnote);
-  font-weight: 600;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.cart-panel__clear {
-  min-height: var(--tap-target-min);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: var(--text-footnote);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
-}
-
-/* Destructive, so it earns its colour only once the finger is on it —
-   not as a permanent red invitation sitting beside the heading. */
-.cart-panel__clear:active {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
-  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
-}
-
+/* No header any more — the list starts right at the panel's top edge, just
+   with enough breathing room above the first line that it doesn't sit flush
+   against the edge. */
 .cart-panel__lines {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 var(--space-4);
+  padding: var(--space-4) var(--space-4) 0;
 }
 
 /* Only the empty state centres. A list must stay top-aligned or items would
@@ -112,7 +70,9 @@
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  /* Was space-4 (16px) between every row here, including under the total —
+     next to a 52px action row that reads as a gap, not spacing. */
+  gap: var(--space-3);
 }
 
 .cart-panel__totals {
@@ -164,12 +124,12 @@
   letter-spacing: var(--tracking-title);
 }
 
+/* No min-height — it's only in the DOM when there's a message, so nothing
+   needs to be reserved for it while empty. */
 .cart-panel__status {
-  min-height: 18px;
   font-size: var(--text-footnote);
   color: var(--color-text-muted);
   text-align: center;
-  transition: color 150ms ease;
 }
 
 .cart-panel__status.is-error {
@@ -180,34 +140,89 @@
   color: var(--color-success);
 }
 
-.cart-panel__submit {
-  /* Was 64px — the tallest thing in the panel by a wide margin, more so
-     once the payment buttons above it came down to 44px. Still clearly
-     the primary action (bigger than those, and still well above the
-     44px tap-target floor), just no longer disproportionate. */
+/* Was one "Print Bill" button. Split so Save (record only, no receipt — the
+   printer-down / paperless path) doesn't compete for width or attention
+   with Print (the everyday action): a 1:3 column split puts Save at a
+   quarter of the row and Print at three quarters.
+   Grid, not flex: a flex-basis:0 + flex-grow split on <button> elements
+   hits a real Chromium quirk where the icon/text content still influences
+   the split despite min-width:0 (measured ~1:2.5 instead of 1:3 with the
+   exact same numbers regardless of content). Grid's fr tracks size purely
+   from the ratio, unaffected by what's inside each cell. */
+.cart-panel__actions {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: var(--space-2);
+}
+
+.cart-panel__save,
+.cart-panel__print {
+  /* Still the tallest thing in the panel, same as the single button this
+     replaced — bigger than the 44px payment buttons above, not by much. */
   min-height: 52px;
+  margin: 0;
+  width: 100%;
+  /* A bare `1fr`/`3fr` track is really minmax(auto, 1fr) — its "auto" floor
+     still factors in this button's content (icon, padding, label), which
+     is exactly the same content-based-minimum trap flexbox has. Without
+     this the 1:3 split drifted to roughly 1:3.7 in practice. */
+  min-width: 0;
   border-radius: var(--radius-md);
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 110ms var(--ease-out), box-shadow 160ms var(--ease-out),
+    background-color 160ms ease, color 160ms ease;
+}
+
+.cart-panel__save {
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.cart-panel__save svg {
+  width: 20px;
+  height: 20px;
+}
+
+.cart-panel__print {
+  gap: var(--space-2);
   background: var(--color-accent);
   color: var(--color-accent-contrast);
   font-size: var(--text-callout);
   font-weight: 700;
   letter-spacing: var(--tracking-body);
-  cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: transform 110ms var(--ease-out), box-shadow 160ms var(--ease-out),
-    background-color 160ms ease, color 160ms ease;
 }
 
-.cart-panel__submit:active:not(:disabled) {
+/* The longest blocker string ("Choose how to pay" in Tamil) is what has to
+   fit here, on the narrowest real panel — truncate rather than wrap or
+   overflow if it ever doesn't. */
+.cart-panel__print span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-panel__print svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.cart-panel__save:active:not(:disabled),
+.cart-panel__print:active:not(:disabled) {
   transform: scale(0.97);
   box-shadow: none;
 }
 
 /* Waiting on the worker, not broken. A dimmed accent button reads as a
    failure; a plain outline reads as a step not finished yet — and the label
-   says which step. */
-.cart-panel__submit.is-waiting {
+   says which step. Save has no label to carry this, so it just disables. */
+.cart-panel__print.is-waiting {
   background: transparent;
   border: 1px dashed var(--color-border);
   color: var(--color-text-muted);
@@ -215,12 +230,14 @@
   font-weight: 600;
 }
 
-.cart-panel__submit:disabled {
+.cart-panel__save:disabled,
+.cart-panel__print:disabled {
   cursor: not-allowed;
 }
 
 /* Only the genuinely inert case — mid-save — dims. */
-.cart-panel__submit:disabled:not(.is-waiting) {
+.cart-panel__save:disabled,
+.cart-panel__print:disabled:not(.is-waiting) {
   opacity: 0.55;
   box-shadow: none;
 }
@@ -229,7 +246,8 @@
    press scale is still movement. Swap it for a surface change so the press
    is still confirmed without anything travelling. */
 @media (prefers-reduced-motion: reduce) {
-  .cart-panel__submit:active:not(:disabled) {
+  .cart-panel__save:active:not(:disabled),
+  .cart-panel__print:active:not(:disabled) {
     transform: none;
     background: color-mix(in srgb, var(--color-accent) 82%, #000);
   }

@@ -47,7 +47,7 @@ export interface UseKeyboardShortcutsOptions {
  *   ← / →    switch category tab
  *   C/U/S/K  select Cash / UPI / Split / Credit (S and K open a dialog)
  *   Enter    submit the order (Print Bill)
- *   ⌫/Del    clear cart (opens the same confirm dialog as the button)
+ *   ⌫/Del    clear cart (opens a confirm dialog — the only way to clear now)
  *   P        open printer setup
  *   E        record spending
  *   B        open the credit book

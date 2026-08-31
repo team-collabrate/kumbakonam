@@ -59,7 +59,10 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const outstanding = useOutstandingCustomers();
 
   const handleOrderSaved = useCallback(
-    async (bill: BillInput) => {
+    async (bill: BillInput, print: boolean) => {
+      // Save was pressed, not Print — the order is already written by this
+      // point (see useOrderSubmit), there's just no receipt to produce.
+      if (!print) return;
       if (printer.status === "ready") {
         try {
           const canvas = await renderReceiptCanvas(bill);
@@ -213,7 +216,6 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           cart={cart}
           orderSubmit={orderSubmit}
           confirmingClear={confirmingClear}
-          onRequestClear={() => setConfirmingClear(true)}
           onCancelClear={() => setConfirmingClear(false)}
           onSelectPayment={selectPayment}
         />
