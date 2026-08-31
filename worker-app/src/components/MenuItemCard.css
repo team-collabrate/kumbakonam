@@ -105,8 +105,17 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  /* Room on the right for the qty control sitting in the same corner. */
-  padding: var(--space-3) 76px var(--space-3) var(--space-3);
+  /* Room on the right for the qty control sitting in the same corner —
+     sized to the "+" circle (40px + its 8px offset from the edge, plus a
+     little clearance), which is what every card shows until something's
+     actually in the cart. The wider "− N +" stepper (see
+     .menu-item-card__stepper below, ~94px) only appears once an item's
+     already added — by then the shopper knows what they picked, so it's
+     an acceptable trade to let it sit slightly over the price line rather
+     than reserve its full width on every card all the time. Was 76px;
+     56px gives real cards on a narrow tablet back close to 20px of name
+     width per line — see MenuGrid.css for why that number matters here. */
+  padding: var(--space-3) 56px var(--space-3) var(--space-3);
 }
 
 .menu-item-card__name {

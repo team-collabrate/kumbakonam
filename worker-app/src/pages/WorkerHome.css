@@ -1,6 +1,12 @@
 .worker-home {
   display: grid;
-  grid-template-columns: 76px 1fr 400px;
+  /* 400px was sized against a wide desktop preview. On the real counter
+     tablet (985px wide — measured from the device, not guessed) that left
+     the menu column too narrow to show 4 legible cards at once alongside
+     it. 260px is still enough for the cart's own content (2-column
+     payment grid, totals, submit) at that width — verified, not assumed —
+     and gives the menu column the room 4 columns actually needs. */
+  grid-template-columns: 76px 1fr 260px;
   grid-template-areas: "sidebar menu cart";
   /* See the html rule in theme.css for why this is two lines, not one —
      same fix, applied here too since this sets its own explicit height
