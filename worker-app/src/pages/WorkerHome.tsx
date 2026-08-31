@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   findOrCreateCustomer,
   useLanguage,
@@ -12,6 +12,7 @@ import { MenuGrid } from "../components/MenuGrid";
 import { CategoryTabs } from "../components/CategoryTabs";
 import { CartPanel } from "../components/CartPanel";
 import { PrinterSetupModal } from "../components/PrinterSetupModal";
+import { PrintDiagnosticsOverlay } from "../components/PrintDiagnosticsOverlay";
 import { BillView } from "../components/BillView";
 import { SplitPaymentModal } from "../components/SplitPaymentModal";
 import { ExpenseModal } from "../components/ExpenseModal";
@@ -59,6 +60,19 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const [creditOpen, setCreditOpen] = useState(false);
   const [khataOpen, setKhataOpen] = useState(false);
   const outstanding = useOutstandingCustomers();
+
+  // PrintDiagnosticsOverlay stays up for a few seconds after a print
+  // finishes (so the final KB/s reading is actually readable) rather than
+  // vanishing the instant printProgress reports complete, but shouldn't
+  // linger indefinitely as a stale readout once the counter's moved on.
+  const [diagnosticsVisible, setDiagnosticsVisible] = useState(false);
+  useEffect(() => {
+    if (!printer.printProgress) return;
+    setDiagnosticsVisible(true);
+    if (printer.printProgress.bytesSent < printer.printProgress.totalBytes) return;
+    const timer = setTimeout(() => setDiagnosticsVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [printer.printProgress]);
 
   const handleOrderSaved = useCallback(
     async (bill: BillInput, print: boolean) => {
@@ -295,6 +309,10 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           onRetryPrint={retryPrint}
           onClose={() => setBillToShow(null)}
         />
+      )}
+
+      {diagnosticsVisible && printer.printProgress && (
+        <PrintDiagnosticsOverlay progress={printer.printProgress} logs={printer.printLogs} />
       )}
     </div>
   );

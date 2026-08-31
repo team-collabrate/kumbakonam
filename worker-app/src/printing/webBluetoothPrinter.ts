@@ -166,6 +166,19 @@ export function getPrinterName(connection: PrinterConnection): string {
   return connection.device.name ?? "Bluetooth printer";
 }
 
+/** Reported after every chunk write, for usePrinter's on-screen speed
+ *  display — see that hook for why this is a callback rather than an
+ *  event stream: it needs to run synchronously in step with the loop
+ *  below, not buffered and replayed after the fact. */
+export interface PrintChunkProgress {
+  chunkIndex: number;
+  chunkBytes: number;
+  bytesSent: number;
+  totalBytes: number;
+  /** Since printToDevice() started, not since this specific chunk. */
+  elapsedMs: number;
+}
+
 /**
  * Sends the ESC/POS byte stream to the printer, chunked to fit BLE writes.
  *
@@ -177,6 +190,7 @@ export function getPrinterName(connection: PrinterConnection): string {
 export async function printToDevice(
   connection: PrinterConnection,
   data: Uint8Array,
+  onProgress?: (progress: PrintChunkProgress) => void,
 ): Promise<PrinterConnection> {
   // BLE links drop when the printer sleeps or wanders out of range; silently
   // reconnecting is far better counter UX than an error the worker can't act on.
@@ -205,12 +219,22 @@ export async function printToDevice(
   // small writes pays the discovery cost once rather than on every chunk.
   let size = CHUNK_SIZE;
   let offset = 0;
+  let chunkIndex = 0;
+  const startedAt = performance.now();
 
   while (offset < data.length) {
     const chunk = data.slice(offset, offset + size);
     try {
       await write(chunk);
       offset += chunk.length;
+      chunkIndex += 1;
+      onProgress?.({
+        chunkIndex,
+        chunkBytes: chunk.length,
+        bytesSent: offset,
+        totalBytes: data.length,
+        elapsedMs: performance.now() - startedAt,
+      });
     } catch (err) {
       const next = CHUNK_FALLBACKS.find((candidate) => candidate < size);
       if (next === undefined) throw err; // already as small as BLE allows
