@@ -100,12 +100,9 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   Kesari: "/items/kesari.png",
   "Neyi Poli": "/items/boli.png",
   Paniyaram: "/items/paniyaram.png",
-  // No shot of any of these three yet — nothing in food-images/ resembles
-  // them closely enough to borrow, unlike the reused photos above. They're
-  // plain text cards (menu-item-card--no-photo) until a real photo shows up.
-  // "Kali": ...,
-  // "Mochai": ...,
-  // "Paasi Payiru": ...,
+  Kali: "/items/kali.png",
+  Mochai: "/items/mochai.png",
+  "Paasi Payiru": "/items/paasi-payiru.png",
 };
 
 export interface MenuItemCardProps {
