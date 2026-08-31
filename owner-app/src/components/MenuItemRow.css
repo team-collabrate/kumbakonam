@@ -8,6 +8,38 @@
   transition: opacity 200ms ease;
 }
 
+.menu-row__reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.menu-row__move {
+  width: 32px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 120ms var(--ease-out), opacity 150ms ease;
+}
+
+.menu-row__move:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+/* Disabled at the top/bottom of a category rather than hidden — the
+   button stays in place so the row's layout doesn't jump, and a dimmed
+   arrow reads as "no further to go" rather than "broken". */
+.menu-row__move:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .menu-row.is-inactive {
   opacity: 0.5;
 }

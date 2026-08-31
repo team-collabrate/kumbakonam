@@ -12,6 +12,19 @@ export interface MenuItem {
   category?: string;
   /** Single emoji shown on the item card, e.g. "☕". No image upload — keeps the stack free of Storage. */
   icon?: string;
+  /**
+   * Where this item sits among the others in its own category — compared
+   * only against other items with the same `category`, never across
+   * categories, so the actual numbers (and any gaps between them) don't
+   * matter, only their relative order. Optional in the type because a
+   * handful of pre-migration docs could in principle still lack it, but
+   * every doc in Firestore has one as of the sortOrder backfill (see
+   * scripts/backfill-menu-sort-order.mjs) — `orderBy("sortOrder")` in
+   * menu.service.ts silently drops any document missing the field, so a
+   * new item must always get one at create time (createMenuItem does this
+   * automatically).
+   */
+  sortOrder?: number;
   active: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;

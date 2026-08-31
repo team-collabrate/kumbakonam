@@ -45,6 +45,19 @@
   border: 1px solid color-mix(in srgb, var(--color-danger) 25%, transparent);
 }
 
+.menu-screen__group + .menu-screen__group {
+  margin-top: var(--space-5);
+}
+
+.menu-screen__group-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+}
+
 .menu-screen__list {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
