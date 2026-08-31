@@ -144,6 +144,22 @@ async function connect(device: BluetoothDevice): Promise<PrinterConnection> {
   return { device, characteristic };
 }
 
+/**
+ * Re-runs the same GATT connect + characteristic lookup printToDevice()
+ * falls back to internally, but callable ahead of time — see usePrinter's
+ * gattserverdisconnected listener, which uses this to warm a dropped link
+ * back up in the background the moment it notices, instead of leaving
+ * that (commonly 1-5+ second, all-BLE-round-trips) cost sitting on the
+ * print button's own critical path the next time someone taps it. This
+ * was previously the single biggest, and entirely unmeasured, contributor
+ * to real-world print time — the on-screen speed overlay's clock only
+ * ever started once printToDevice's own internal reconnect had already
+ * finished.
+ */
+export async function reconnectPrinter(device: BluetoothDevice): Promise<PrinterConnection> {
+  return connect(device);
+}
+
 /** Opens the browser's Bluetooth picker — must run inside a user gesture (a click). */
 export async function requestPrinter(): Promise<PrinterConnection> {
   // The printer model isn't known in advance, so show every nearby device
@@ -209,6 +225,14 @@ export type PrintEvent =
       fromSize: number;
       toSize: number;
       elapsedMs: number;
+    }
+  | {
+      kind: "reconnect";
+      /** How long the GATT connect + service/characteristic lookup took —
+       *  previously invisible: it happened before printToDevice's own
+       *  timer even started (see that function's comment). Usually the
+       *  actual explanation for a "slow" print, not chunk size or delay. */
+      ms: number;
     };
 
 /**
@@ -233,7 +257,10 @@ export type PrintEvent =
  *
  * Returns the connection actually used, since a dropped link is
  * re-established here and yields fresh GATT objects the caller should
- * hold onto.
+ * hold onto. usePrinter's gattserverdisconnected listener means this
+ * branch should rarely fire for real anymore (see reconnectPrinter above)
+ * — it stays as a safety net for whatever that listener misses, not the
+ * primary way a drop gets noticed.
  */
 export async function printToDevice(
   connection: PrinterConnection,
@@ -244,7 +271,9 @@ export async function printToDevice(
   // reconnecting is far better counter UX than an error the worker can't act on.
   let active = connection;
   if (!connection.device.gatt?.connected) {
+    const reconnectStartedAt = performance.now();
     active = await connect(connection.device);
+    onProgress?.({ kind: "reconnect", ms: performance.now() - reconnectStartedAt });
   }
 
   const { characteristic } = active;

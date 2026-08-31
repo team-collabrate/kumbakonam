@@ -5,6 +5,7 @@ import {
   getPrinterName,
   isWebBluetoothSupported,
   printToDevice,
+  reconnectPrinter,
   requestPrinter,
   type PrinterConnection,
   type PrintEvent,
@@ -78,6 +79,45 @@ export function usePrinter(): UsePrinterResult {
   const lastFlushRef = useRef(0);
   const lastChunkIndexRef = useRef(0);
   const fallbackCountRef = useRef(0);
+  // Which device currently has a gattserverdisconnected listener attached —
+  // guards against attaching a second one to the same device across
+  // re-renders/reconnects.
+  const watchedDeviceRef = useRef<BluetoothDevice | null>(null);
+
+  /**
+   * The actual fix for "printing takes 15-30 seconds": that time was never
+   * the write loop (see printToDevice's own comment) — it was the GATT
+   * reconnect + service/characteristic lookup, which used to only happen
+   * lazily, discovered at the start of printToDevice, sitting squarely on
+   * the print button's own critical path every time the printer's BLE
+   * link had gone to sleep since the last order (routine for a
+   * battery-powered thermal printer between customers).
+   *
+   * This listens for the browser telling us the link dropped and
+   * reconnects immediately in the background — invisible to the worker,
+   * finished well before they've built the next order and tapped Print.
+   * printToDevice's own lazy reconnect stays in place as a fallback for
+   * whatever this misses (e.g. a state Chrome doesn't fire this event
+   * for), but should rarely be the one doing the work anymore.
+   */
+  const watchForDisconnect = useCallback((connection: PrinterConnection) => {
+    const { device } = connection;
+    if (watchedDeviceRef.current === device) return;
+    watchedDeviceRef.current = device;
+    device.addEventListener("gattserverdisconnected", () => {
+      reconnectPrinter(device)
+        .then((fresh) => {
+          connectionRef.current = fresh;
+        })
+        .catch((err) => {
+          // Not surfaced to the worker — printToDevice's own lazy
+          // reconnect gets another try at print time regardless, and an
+          // error here almost always means "still out of range", not
+          // something actionable right now.
+          console.warn("Background printer reconnect failed (will retry at next print)", err);
+        });
+    });
+  }, []);
 
   useEffect(() => {
     if (!isWebBluetoothSupported()) {
@@ -88,6 +128,7 @@ export function usePrinter(): UsePrinterResult {
       .then((connection) => {
         if (connection) {
           connectionRef.current = connection;
+          watchForDisconnect(connection);
           setDeviceName(getPrinterName(connection));
           setStatus("ready");
         } else {
@@ -95,7 +136,7 @@ export function usePrinter(): UsePrinterResult {
         }
       })
       .catch(() => setStatus("unpaired"));
-  }, []);
+  }, [watchForDisconnect]);
 
   const connect = useCallback(async () => {
     setStatus("connecting");
@@ -103,6 +144,7 @@ export function usePrinter(): UsePrinterResult {
     try {
       const connection = await requestPrinter();
       connectionRef.current = connection;
+      watchForDisconnect(connection);
       setDeviceName(getPrinterName(connection));
       setStatus("ready");
     } catch (err) {
@@ -113,7 +155,7 @@ export function usePrinter(): UsePrinterResult {
       setError(cancelled ? MESSAGES.noDevice[language] : MESSAGES.connectFailed[language]);
       setStatus(connectionRef.current ? "ready" : "unpaired");
     }
-  }, [language]);
+  }, [language, watchForDisconnect]);
 
   const print = useCallback(
     async (data: Uint8Array): Promise<boolean> => {
@@ -135,6 +177,17 @@ export function usePrinter(): UsePrinterResult {
       });
 
       const onProgress = (event: PrintEvent) => {
+        if (event.kind === "reconnect") {
+          // Should be rare now that watchForDisconnect reconnects in the
+          // background as soon as the link drops — this firing at all
+          // means that missed it (or the app only just loaded), so it's
+          // worth knowing about, not silently absorbed into the total.
+          logsRef.current.push(`[RECONNECT] GATT link re-established in ${Math.round(event.ms)}ms`);
+          lastFlushRef.current = performance.now();
+          setPrintLogs([...logsRef.current]);
+          return;
+        }
+
         if (event.kind === "fallback") {
           fallbackCountRef.current += 1;
           logsRef.current.push(`[RETRY] ${event.fromSize}-byte write refused; falling back to ${event.toSize} bytes`);
@@ -182,6 +235,10 @@ export function usePrinter(): UsePrinterResult {
         // would reconnect all over again.
         const printStartedAt = performance.now();
         connectionRef.current = await printToDevice(connectionRef.current, data, onProgress);
+        // No-op if this is the same device watchForDisconnect is already
+        // watching (the common case) — only matters if printToDevice's
+        // own internal reconnect swapped in a fresh BluetoothDevice.
+        watchForDisconnect(connectionRef.current);
 
         const elapsedMs = performance.now() - printStartedAt;
         const kbPerSec = elapsedMs > 0 ? data.length / 1024 / (elapsedMs / 1000) : 0;
@@ -213,7 +270,7 @@ export function usePrinter(): UsePrinterResult {
         return false;
       }
     },
-    [language],
+    [language, watchForDisconnect],
   );
 
   return { status, error, deviceName, connect, print, printLogs, printProgress };
