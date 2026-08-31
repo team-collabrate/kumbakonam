@@ -25,12 +25,14 @@ const KNOWN_PRINTER_SERVICES: string[] = [
  * A receipt with a logo is ~50 KB: at 180 bytes that is 300+ round trips and
  * a visible wait at the counter, which is what staff were feeling.
  *
- * 512 is the largest value an ATT attribute can hold, and Chrome splits
- * anything over the negotiated MTU into a long write for us. Printers that
- * won't take a write this large are handled by stepping down — see
- * CHUNK_FALLBACKS.
+ * 512 (the largest value an ATT attribute can hold) was the starting point,
+ * but on the printer actually in use it still overran the input buffer even
+ * with the delay below in place — a chunk this large is a lot for a small
+ * buffer to absorb in one write, no matter the gap after it. Dropped to 128
+ * to trade some of that speed for not printing garbage. CHUNK_FALLBACKS
+ * still steps down further from here if even 128 is refused.
  */
-const CHUNK_SIZE = 512;
+const CHUNK_SIZE = 128;
 
 /**
  * Progressively smaller writes to fall back to, ending at the 20 bytes a
@@ -42,9 +44,12 @@ const CHUNK_SIZE = 512;
  */
 const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
-/** Cheap printers have small input buffers; a short gap between chunks stops
- *  them overflowing and printing garbage halfway down the receipt. */
-const CHUNK_DELAY_MS = 12;
+/** Cheap printers have small input buffers; a gap between chunks stops them
+ *  overflowing and printing garbage halfway down the receipt. Raised from
+ *  12ms — even with every chunk now acknowledged (see write() below) and
+ *  CHUNK_SIZE cut to 128, the buffer still needed more breathing room than
+ *  12ms gave it between writes. */
+const CHUNK_DELAY_MS = 50;
 
 export interface PrinterConnection {
   device: BluetoothDevice;
