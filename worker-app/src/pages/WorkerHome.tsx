@@ -200,6 +200,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
         </div>
 
         <MenuGrid
+          activeCategory={activeCategory}
           visibleItems={visibleItems}
           totalItemCount={items.length}
           loading={loading}
