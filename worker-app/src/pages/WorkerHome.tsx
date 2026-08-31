@@ -297,7 +297,10 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           status={printer.status}
           error={printer.error}
           deviceName={printer.deviceName}
+          platform={printer.platform}
+          printerDevices={printer.printerDevices}
           onConnect={printer.connect}
+          onSelectPrinter={printer.selectPrinter}
           onClose={() => setPrinterSetupOpen(false)}
         />
       )}

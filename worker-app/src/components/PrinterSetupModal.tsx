@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLanguage, type Language } from "@kumbakonam/shared";
 import type { PrinterStatus } from "../hooks/usePrinter";
+import type { ClassicPrinterConnection } from "../printing/classicBluetoothPrinter";
 import { getBluetoothDiagnostics, type BluetoothDiagnostics } from "../printing/webBluetoothPrinter";
 import "./PrinterSetupModal.css";
 
@@ -8,7 +9,13 @@ export interface PrinterSetupModalProps {
   status: PrinterStatus;
   error: string | null;
   deviceName: string | null;
+  /** "native" (classic Bluetooth SPP, installed app) vs "web" (BLE/GATT, plain browser tab) — see usePrinter.ts. */
+  platform: "native" | "web";
+  /** Native only — populated once status is "picking". */
+  printerDevices: ClassicPrinterConnection[];
   onConnect: () => void;
+  /** Native only — called with an address from printerDevices. */
+  onSelectPrinter: (address: string) => void;
   onClose: () => void;
 }
 
@@ -28,6 +35,12 @@ const STATUS_TEXT: Record<PrinterStatus, Record<Language, string>> = {
   connecting: {
     en: "Pick your printer from the Bluetooth list…",
     ta: "புளூடூத் பட்டியலிலிருந்து உங்கள் பிரிண்டரைத் தேர்ந்தெடுக்கவும்…",
+  },
+  // Native only — the web path never leaves "connecting" mid-flow, since
+  // the browser's own picker is a single blocking call.
+  picking: {
+    en: "Pick your printer from the list below.",
+    ta: "கீழே உள்ள பட்டியலிலிருந்து உங்கள் பிரிண்டரைத் தேர்ந்தெடுக்கவும்.",
   },
   ready: { en: "Printer connected.", ta: "பிரிண்டர் இணைக்கப்பட்டது." },
   error: {
@@ -56,6 +69,10 @@ const STRINGS = {
     en: "If all of the above are fine and the printer still isn't listed, it likely pairs as a classic Bluetooth printer. Browsers can only reach Bluetooth LE printers, so use the on-screen bill instead.",
     ta: "மேலே உள்ள அனைத்தும் சரியாக இருந்தும் பிரிண்டர் பட்டியலில் இல்லை என்றால், அது classic Bluetooth பிரிண்டராக இருக்கலாம். உலாவிகள் Bluetooth LE பிரிண்டர்களை மட்டுமே அணுக முடியும், எனவே திரையில் உள்ள பில்லைப் பயன்படுத்தவும்.",
   },
+  emptyScan: {
+    en: "No nearby devices found. Make sure the printer is on, and pair it in Android's own Bluetooth settings first if this is the first time.",
+    ta: "அருகில் சாதனங்கள் எதுவும் இல்லை. பிரிண்டர் ஆன் செய்யப்பட்டுள்ளதா என்பதைச் சரிபார்க்கவும்; இது முதல் முறை எனில் Android இன் புளூடூத் அமைப்புகளில் முதலில் இணைக்கவும்.",
+  },
 };
 
 function Check({ ok, okText, badText }: { ok: boolean; okText: string; badText: string }) {
@@ -68,13 +85,25 @@ function Check({ ok, okText, badText }: { ok: boolean; okText: string; badText: 
 }
 
 /** Engineering Plan Phase 3 — one-time "connect printer" setup screen. */
-export function PrinterSetupModal({ status, error, deviceName, onConnect, onClose }: PrinterSetupModalProps) {
+export function PrinterSetupModal({
+  status,
+  error,
+  deviceName,
+  platform,
+  printerDevices,
+  onConnect,
+  onSelectPrinter,
+  onClose,
+}: PrinterSetupModalProps) {
   const { language } = useLanguage();
   const [diagnostics, setDiagnostics] = useState<BluetoothDiagnostics | null>(null);
 
-  // An empty picker looks identical to "user cancelled" from inside
-  // requestDevice(), so the causes have to be probed separately.
+  // Web only — this checklist (browser support, secure context, Android)
+  // is about *why the browser's Bluetooth picker* might not show a device;
+  // none of it applies once classic SPP is reachable natively, and an
+  // empty scan there is just "nothing nearby", not one of these causes.
   useEffect(() => {
+    if (platform !== "web") return;
     let cancelled = false;
     getBluetoothDiagnostics().then((d) => {
       if (!cancelled) setDiagnostics(d);
@@ -82,7 +111,7 @@ export function PrinterSetupModal({ status, error, deviceName, onConnect, onClos
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [platform]);
 
   // Escape only — Enter is left alone so it can't accidentally trigger the
   // Bluetooth device picker (that's a real, deliberate action, not a default).
@@ -108,6 +137,25 @@ export function PrinterSetupModal({ status, error, deviceName, onConnect, onClos
 
         {error && <p className="printer-modal__error">{error}</p>}
 
+        {/* Native picker — a plain list, not the OS's own picker (classic
+            SPP has no browser-style device-choosing UI to reuse the way
+            requestDevice() gave the web path one for free). */}
+        {platform === "native" && status === "picking" && (
+          <ul className="printer-modal__devices">
+            {printerDevices.length === 0 ? (
+              <p className="printer-modal__help-note">{STRINGS.emptyScan[language]}</p>
+            ) : (
+              printerDevices.map((device) => (
+                <li key={device.address}>
+                  <button type="button" className="printer-modal__device" onClick={() => onSelectPrinter(device.address)}>
+                    {device.name}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+
         <button
           type="button"
           className="printer-modal__connect"
@@ -117,8 +165,9 @@ export function PrinterSetupModal({ status, error, deviceName, onConnect, onClos
           {status === "ready" ? STRINGS.connectAnother[language] : STRINGS.connect[language]}
         </button>
 
-        {/* Only worth surfacing while the printer still isn't working. */}
-        {status !== "ready" && (
+        {/* Only worth surfacing while the printer still isn't working, and
+            only on the web path — see this effect's own comment above. */}
+        {platform === "web" && status !== "ready" && (
           <details className="printer-modal__help">
             <summary>{STRINGS.troubleshootTitle[language]}</summary>
             {diagnostics === null ? (

@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { useLanguage } from "@kumbakonam/shared";
+import {
+  connectClassic,
+  getStoredPrinterConnection,
+  printClassic,
+  scanForPrinters,
+  type ClassicPrinterConnection,
+} from "../printing/classicBluetoothPrinter";
 import {
   getPairedPrinter,
   getPrinterName,
@@ -11,13 +19,43 @@ import {
   type PrintEvent,
 } from "../printing/webBluetoothPrinter";
 
-export type PrinterStatus = "unsupported" | "checking" | "unpaired" | "connecting" | "ready" | "error";
+/**
+ * Two transports, chosen once at startup and never mixed mid-session:
+ *
+ *  - "native": inside the Capacitor/Android shell, classic Bluetooth SPP
+ *    (classicBluetoothPrinter.ts) — a single unchunked write, matching the
+ *    old app's own approach. This is the one that actually fixes print
+ *    speed; see that module's own comment for the full reasoning.
+ *  - "web": a plain browser tab (including this same app opened in Chrome
+ *    instead of installed), where classic Bluetooth is unreachable at
+ *    all — Web Bluetooth (webBluetoothPrinter.ts), the BLE/GATT path this
+ *    hook used exclusively before the native shell existed.
+ *
+ * Capacitor.isNativePlatform() is false for a plain web build/tab and true
+ * once the app is actually running inside the wrapped native shell, so
+ * this same codebase (and this same hook) serves both without a build-time
+ * flag.
+ */
+const PLATFORM: "native" | "web" = Capacitor.isNativePlatform() ? "native" : "web";
+
+export type PrinterStatus =
+  | "unsupported"
+  | "checking"
+  | "unpaired"
+  | "connecting"
+  /** Native only — a scan finished and the worker needs to tap one from printerDevices. */
+  | "picking"
+  | "ready"
+  | "error";
 
 /** Live numbers for the on-screen speed display — see PrintDiagnosticsOverlay.
  *  Recomputed from real bytes-sent-so-far / elapsed-so-far on every chunk,
  *  not from a fixed per-chunk time estimate, so it stays accurate even if
  *  printToDevice steps down to a smaller chunk size mid-receipt (see
- *  CHUNK_FALLBACKS in webBluetoothPrinter.ts). */
+ *  CHUNK_FALLBACKS in webBluetoothPrinter.ts). On the native/classic path
+ *  there's only ever one "chunk" — the whole receipt, reported once the
+ *  single write() resolves — so this still renders a sensible 100%/done
+ *  state without the overlay needing to know which transport is active. */
 export interface PrintProgress {
   chunkIndex: number;
   bytesSent: number;
@@ -28,9 +66,7 @@ export interface PrintProgress {
   etaMs: number | null;
   /** How many times the printer has refused the current chunk size and
    *  forced a smaller one (see CHUNK_FALLBACKS in webBluetoothPrinter.ts).
-   *  A print that's much slower than CHUNK_SIZE/CHUNK_DELAY_MS alone would
-   *  predict is usually this — most of the receipt going out in much
-   *  smaller pieces than configured, not the configured delay itself. */
+   *  Web/GATT path only — classic SPP has no chunk size to refuse. */
   fallbackCount: number;
 }
 
@@ -38,8 +74,14 @@ export interface UsePrinterResult {
   status: PrinterStatus;
   error: string | null;
   deviceName: string | null;
-  /** Opens the browser's Bluetooth picker — must be called from a user gesture (e.g. a button onClick). */
+  /** Which transport this session is actually using — lets the UI (PrinterSetupModal) show the right flow. */
+  platform: "native" | "web";
+  /** Native only — results of the most recent scan, shown as a pick list while status is "picking". */
+  printerDevices: ClassicPrinterConnection[];
+  /** Opens the Bluetooth picker (web: the browser's own; native: starts a scan and moves to "picking"). Must run inside a user gesture. */
   connect: () => Promise<void>;
+  /** Native only — call with an address from printerDevices once the worker taps one. */
+  selectPrinter: (address: string) => Promise<void>;
   print: (data: Uint8Array) => Promise<boolean>;
   /** [PRINT START] / per-chunk / [COMPLETE] lines from the most recent print — cleared at the start of the next one. */
   printLogs: string[];
@@ -63,42 +105,46 @@ const MESSAGES = {
  *  takes, which is a real jank risk on the exact low-end Android tablets
  *  this app targets. The full log is still captured immediately in
  *  logsRef; this only throttles how often the *screen* catches up to it,
- *  which is enough to still read as live. */
+ *  which is enough to still read as live. Only the web/GATT path can even
+ *  produce enough events for this to matter — the native path emits one. */
 const UI_FLUSH_INTERVAL_MS = 150;
 
-/** Bluetooth (BLE) pairing + ESC/POS printing, per TDD §6. */
+/** Bluetooth pairing + ESC/POS printing — classic SPP natively (per TDD
+ *  §6's "match the old app" follow-up), BLE/GATT as the web fallback. */
 export function usePrinter(): UsePrinterResult {
   const { language } = useLanguage();
   const [status, setStatus] = useState<PrinterStatus>("checking");
   const [error, setError] = useState<string | null>(null);
   const [deviceName, setDeviceName] = useState<string | null>(null);
+  const [printerDevices, setPrinterDevices] = useState<ClassicPrinterConnection[]>([]);
   const [printLogs, setPrintLogs] = useState<string[]>([]);
   const [printProgress, setPrintProgress] = useState<PrintProgress | null>(null);
   const connectionRef = useRef<PrinterConnection | null>(null);
+  const classicConnectionRef = useRef<ClassicPrinterConnection | null>(null);
   const logsRef = useRef<string[]>([]);
   const lastFlushRef = useRef(0);
   const lastChunkIndexRef = useRef(0);
   const fallbackCountRef = useRef(0);
   // Which device currently has a gattserverdisconnected listener attached —
   // guards against attaching a second one to the same device across
-  // re-renders/reconnects.
+  // re-renders/reconnects. Web/GATT path only.
   const watchedDeviceRef = useRef<BluetoothDevice | null>(null);
 
   /**
-   * The actual fix for "printing takes 15-30 seconds": that time was never
-   * the write loop (see printToDevice's own comment) — it was the GATT
-   * reconnect + service/characteristic lookup, which used to only happen
-   * lazily, discovered at the start of printToDevice, sitting squarely on
-   * the print button's own critical path every time the printer's BLE
-   * link had gone to sleep since the last order (routine for a
-   * battery-powered thermal printer between customers).
+   * The actual fix for "printing takes 15-30 seconds" on the web/GATT path:
+   * that time was never the write loop (see printToDevice's own comment) —
+   * it was the GATT reconnect + service/characteristic lookup, which used
+   * to only happen lazily, discovered at the start of printToDevice,
+   * sitting squarely on the print button's own critical path every time
+   * the printer's BLE link had gone to sleep since the last order (routine
+   * for a battery-powered thermal printer between customers).
    *
    * This listens for the browser telling us the link dropped and
    * reconnects immediately in the background — invisible to the worker,
    * finished well before they've built the next order and tapped Print.
    * printToDevice's own lazy reconnect stays in place as a fallback for
-   * whatever this misses (e.g. a state Chrome doesn't fire this event
-   * for), but should rarely be the one doing the work anymore.
+   * whatever this misses. Only relevant on the web/GATT path — classic SPP
+   * has no service discovery step to hide, so it never needed this.
    */
   const watchForDisconnect = useCallback((connection: PrinterConnection) => {
     const { device } = connection;
@@ -120,6 +166,21 @@ export function usePrinter(): UsePrinterResult {
   }, []);
 
   useEffect(() => {
+    if (PLATFORM === "native") {
+      getStoredPrinterConnection()
+        .then((connection) => {
+          if (connection) {
+            classicConnectionRef.current = connection;
+            setDeviceName(connection.name);
+            setStatus("ready");
+          } else {
+            setStatus("unpaired");
+          }
+        })
+        .catch(() => setStatus("unpaired"));
+      return;
+    }
+
     if (!isWebBluetoothSupported()) {
       setStatus("unsupported");
       return;
@@ -139,8 +200,23 @@ export function usePrinter(): UsePrinterResult {
   }, [watchForDisconnect]);
 
   const connect = useCallback(async () => {
-    setStatus("connecting");
     setError(null);
+
+    if (PLATFORM === "native") {
+      setStatus("connecting");
+      try {
+        const devices = await scanForPrinters();
+        setPrinterDevices(devices);
+        setStatus("picking");
+      } catch (err) {
+        console.error("Printer scan failed", err);
+        setError(MESSAGES.connectFailed[language]);
+        setStatus(classicConnectionRef.current ? "ready" : "unpaired");
+      }
+      return;
+    }
+
+    setStatus("connecting");
     try {
       const connection = await requestPrinter();
       connectionRef.current = connection;
@@ -157,8 +233,72 @@ export function usePrinter(): UsePrinterResult {
     }
   }, [language, watchForDisconnect]);
 
+  /** Native only — the worker tapped one device from the "picking" list. */
+  const selectPrinter = useCallback(
+    async (address: string) => {
+      setStatus("connecting");
+      setError(null);
+      try {
+        const connection = await connectClassic(address);
+        classicConnectionRef.current = connection;
+        setDeviceName(connection.name);
+        setStatus("ready");
+      } catch (err) {
+        console.error("Printer connect failed", err);
+        setError(MESSAGES.connectFailed[language]);
+        setStatus(classicConnectionRef.current ? "ready" : "unpaired");
+      }
+    },
+    [language],
+  );
+
   const print = useCallback(
     async (data: Uint8Array): Promise<boolean> => {
+      if (PLATFORM === "native") {
+        if (!classicConnectionRef.current) return false;
+
+        logsRef.current = [`[PRINT START] Size: ${(data.length / 1024).toFixed(1)} KB`];
+        setPrintLogs(logsRef.current);
+        setPrintProgress({
+          chunkIndex: 0,
+          bytesSent: 0,
+          totalBytes: data.length,
+          elapsedMs: 0,
+          kbPerSec: 0,
+          etaMs: null,
+          fallbackCount: 0,
+        });
+
+        try {
+          const startedAt = performance.now();
+          await printClassic(classicConnectionRef.current, data);
+          const elapsedMs = performance.now() - startedAt;
+          const kbPerSec = elapsedMs > 0 ? data.length / 1024 / (elapsedMs / 1000) : 0;
+
+          logsRef.current.push(
+            `[COMPLETE] ${data.length} bytes in ${Math.round(elapsedMs)}ms = ${kbPerSec.toFixed(1)} KB/s (single write, classic SPP)`,
+          );
+          setPrintLogs([...logsRef.current]);
+          setPrintProgress({
+            chunkIndex: 1,
+            bytesSent: data.length,
+            totalBytes: data.length,
+            elapsedMs,
+            kbPerSec,
+            etaMs: 0,
+            fallbackCount: 0,
+          });
+          return true;
+        } catch (err) {
+          console.error("Print failed", err);
+          setError(MESSAGES.printFailed[language]);
+          setStatus("error");
+          logsRef.current.push(`[FAILED] ${err instanceof Error ? err.message : String(err)}`);
+          setPrintLogs([...logsRef.current]);
+          return false;
+        }
+      }
+
       if (!connectionRef.current) return false;
 
       logsRef.current = [`[PRINT START] Size: ${(data.length / 1024).toFixed(1)} KB`];
@@ -273,5 +413,16 @@ export function usePrinter(): UsePrinterResult {
     [language, watchForDisconnect],
   );
 
-  return { status, error, deviceName, connect, print, printLogs, printProgress };
+  return {
+    status,
+    error,
+    deviceName,
+    platform: PLATFORM,
+    printerDevices,
+    connect,
+    selectPrinter,
+    print,
+    printLogs,
+    printProgress,
+  };
 }
