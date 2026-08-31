@@ -70,6 +70,16 @@ export interface Order {
   customerName?: string;
   /** Reference to `users.userId` who created the order */
   workerId: string;
+  /**
+   * Who was actually on shift when this was billed, from the Worker app's
+   * shift picker (see useActiveWorkerName / WorkerNameSelect) — separate
+   * from `workerId`, which is just whichever shared PIN unlocked the
+   * tablet and stays tied to a real `users` doc for firestore.rules'
+   * `isActiveUserWithRole` check. This is display-only, captured at the
+   * moment of sale so it survives a shift-picker change later. Optional
+   * because orders taken before the picker existed don't have one.
+   */
+  billedByName?: string;
   createdAt: Timestamp;
   /** Set once the write is confirmed by the server; null while queued offline */
   syncedAt: Timestamp | null;

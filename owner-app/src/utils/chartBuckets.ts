@@ -73,3 +73,26 @@ export function bucketByWeekOfMonth(allOrders: Order[], monthStart: Date, langua
 function getDaysInMonth(monthStart: Date): number {
   return new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
 }
+
+const RECENT_LABELS: Record<Language, string[]> = {
+  en: ["Day before", "Yesterday", "Today"],
+  ta: ["முந்தநாள்", "நேற்று", "இன்று"],
+};
+
+/** 3-day view — bucket by calendar day, oldest to newest, matching the
+ *  window pruneOldOrders keeps (see orders.service.ts). `rangeStart` is
+ *  the range's own start (local midnight, day before yesterday), so this
+ *  never has to guess "today" independently of what the rest of the
+ *  screen is already showing. */
+export function bucketByRecentDay(allOrders: Order[], rangeStart: Date, language: Language = "en"): ChartBucket[] {
+  const orders = excludeVoided(allOrders);
+  const totals = [0, 0, 0];
+  const startMidnight = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+  for (const order of orders) {
+    const d = order.createdAt.toDate();
+    const orderMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dayIndex = Math.round((orderMidnight.getTime() - startMidnight.getTime()) / 86400000);
+    if (dayIndex >= 0 && dayIndex < 3) totals[dayIndex] += order.total;
+  }
+  return RECENT_LABELS[language].map((label, i) => ({ label, total: totals[i] }));
+}

@@ -1,4 +1,4 @@
-export type RangeMode = "daily" | "weekly" | "monthly";
+export type RangeMode = "recent" | "daily" | "weekly" | "monthly";
 
 export interface DateRange {
   start: Date;
@@ -18,6 +18,15 @@ export interface DateRange {
  * rest of the period.
  */
 export function getRange(mode: RangeMode, now: Date = new Date()): DateRange {
+  if (mode === "recent") {
+    // Today, yesterday, the day before — matches the window pruneOldOrders
+    // keeps (see orders.service.ts): anything this range could show still
+    // exists, and nothing older does.
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return { start, end };
+  }
+
   if (mode === "daily") {
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);

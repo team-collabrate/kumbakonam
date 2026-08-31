@@ -9,6 +9,7 @@ import {
   type Language,
   type Order,
 } from "@kumbakonam/shared";
+import { WorkerDot } from "./WorkerDot";
 import "./OrderHistoryRow.css";
 
 /** Exhaustive over PaymentMethod on purpose: "card" is no longer offered at
@@ -31,6 +32,7 @@ const STRINGS = {
   cash: { en: "Cash", ta: "ரொக்கம்" },
   onAccount: { en: "On account", ta: "கடன்" },
   voided: { en: "Voided", ta: "ரத்துசெய்யப்பட்டது" },
+  billedBy: { en: "Billed by", ta: "பில் செய்தவர்" },
   voidAction: { en: "Void this order", ta: "இந்த ஆர்டரை ரத்துசெய்" },
   voidTitle: { en: "Void this order?", ta: "இந்த ஆர்டரை ரத்துசெய்யவா?" },
   voidMessage: {
@@ -78,8 +80,11 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
     <div className={`order-row ${isVoided ? "is-voided" : ""}`}>
       <button type="button" className="order-row__summary" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
         <div className="order-row__summary-left">
-          <span className="order-row__time">
-            {order.createdAt.toDate().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
+          <span className="order-row__time-line">
+            <WorkerDot name={order.billedByName} />
+            <span className="order-row__time">
+              {order.createdAt.toDate().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })}
+            </span>
           </span>
           <span className="order-row__meta">
             {itemCount} {itemCount === 1 ? STRINGS.item[language] : STRINGS.items[language]} ·{" "}
@@ -116,6 +121,16 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
               </li>
             ))}
           </ul>
+          {/* The dot in the collapsed row is the quick-scan version of this —
+              spelled out here for anyone who doesn't have the colour
+              legend memorised. Absent on orders taken before the shift
+              picker existed. */}
+          {order.billedByName && (
+            <div className="order-row__discount-line">
+              <span>{STRINGS.billedBy[language]}</span>
+              <span>{order.billedByName}</span>
+            </div>
+          )}
           {/* Only orders taken before discounts were dropped carry one. */}
           {order.discount > 0 && (
             <div className="order-row__discount-line">

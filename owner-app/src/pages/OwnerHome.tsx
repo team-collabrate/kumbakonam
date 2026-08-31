@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { SyncStatusBadge, useOnlineStatus, type SessionUser } from "@kumbakonam/shared";
+import { useEffect, useState } from "react";
+import { SyncStatusBadge, pruneOldOrders, useOnlineStatus, type SessionUser } from "@kumbakonam/shared";
 import { BottomTabBar, type TabKey } from "../components/BottomTabBar";
 import { DashboardScreen } from "./DashboardScreen";
 import { ReportsScreen } from "./ReportsScreen";
@@ -22,6 +22,16 @@ export function OwnerHome({ sessionUser, onLogout }: OwnerHomeProps) {
   // captive portal, a router with no uplink), so it's a real improvement
   // over nothing but not a guarantee the dashboard is live this second.
   const online = useOnlineStatus();
+
+  // Best-effort, once per app load — this is what makes the 3-day retention
+  // "automatic" without Cloud Functions (see pruneOldOrders' own comment
+  // for why, and the limitation: an owner who doesn't open the app for a
+  // few days just means the next open prunes a slightly bigger backlog,
+  // not that anything goes uncleaned). Runs regardless of which tab is
+  // open, so it's here rather than inside ReportsScreen.
+  useEffect(() => {
+    pruneOldOrders(3).catch((err) => console.error("Order pruning failed (non-fatal)", err));
+  }, []);
 
   return (
     <div className="owner-home" data-theme="light">

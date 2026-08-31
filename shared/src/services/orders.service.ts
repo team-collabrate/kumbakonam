@@ -12,6 +12,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
   type DocumentReference,
   type FirestoreError,
   type Unsubscribe,
@@ -34,6 +35,8 @@ export interface CreateOrderInput {
   customerId?: string;
   customerName?: string;
   workerId: string;
+  /** See Order.billedByName. */
+  billedByName?: string;
   /** From getNextBillNo() — see billCounter.ts. */
   billNo: number;
 }
@@ -218,4 +221,41 @@ export async function voidOrder(orderId: string, voidedBy: string): Promise<void
       });
     }
   });
+}
+
+/**
+ * Permanently deletes every order older than `olderThanDays` — a deliberate
+ * product decision (owner requested only the last 3 days stay searchable,
+ * older ones purged automatically), not the original design: orders used
+ * to be delete-never (see the old comment on the `orders` delete rule in
+ * firestore.rules, and voidOrder above, which cancels a sale by marking it
+ * rather than removing it, specifically to keep the bill-number sequence
+ * and audit trail intact). That trade-off is now explicit and accepted —
+ * a sale older than the window is gone for good, with no way to look it up
+ * again for a customer query or a tax question.
+ *
+ * Called from the Owner app once per load (see OwnerHome.tsx) rather than
+ * running as a true server-side schedule — this stack has no Cloud
+ * Functions (see firestore.rules' own note on why: custom infra needs
+ * Blaze billing, flagged rather than added unprompted), so "automatic"
+ * here means "whenever the app is next opened", not "even if nobody opens
+ * it for a week". A real Firestore TTL policy on `createdAt` would close
+ * that gap without any code — a one-time, free, no-Blaze setup in the
+ * Firebase console (Firestore → TTL policies) if that's ever worth doing.
+ *
+ * firestore.rules' delete rule enforces the same 3-day floor server-side,
+ * independent of this function — a compromised or buggy client can prune
+ * old orders early, never a recent one.
+ */
+export async function pruneOldOrders(olderThanDays: number): Promise<number> {
+  const db = getFirestoreDb();
+  const cutoff = Timestamp.fromMillis(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+  const snap = await getDocs(query(collection(db, COLLECTION), where("createdAt", "<", cutoff)));
+  const docs = snap.docs;
+  for (let i = 0; i < docs.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const d of docs.slice(i, i + 400)) batch.delete(d.ref);
+    await batch.commit();
+  }
+  return docs.length;
 }

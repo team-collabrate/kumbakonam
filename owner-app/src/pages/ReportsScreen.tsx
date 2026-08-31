@@ -4,11 +4,12 @@ import { getRange, type RangeMode } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
 import { useCustomers } from "../hooks/useCustomers";
-import { bucketByDayOfWeek, bucketByHour, bucketByWeekOfMonth } from "../utils/chartBuckets";
+import { bucketByDayOfWeek, bucketByHour, bucketByRecentDay, bucketByWeekOfMonth } from "../utils/chartBuckets";
 import { computeDashboardStats } from "../utils/dashboardStats";
 import { RangeSegmentedControl } from "../components/RangeSegmentedControl";
 import { SalesChart } from "../components/SalesChart";
 import { OrderHistoryRow } from "../components/OrderHistoryRow";
+import { WorkerLegend } from "../components/WorkerLegend";
 import { ExpenseHistoryRow } from "../components/ExpenseHistoryRow";
 import { RecordPaymentModal } from "../components/RecordPaymentModal";
 import { RecordExpenseModal } from "../components/RecordExpenseModal";
@@ -33,7 +34,9 @@ const STRINGS = {
 export function ReportsScreen() {
   const { language } = useLanguage();
   const { sessionUser } = useSession();
-  const [mode, setMode] = useState<RangeMode>("daily");
+  // Defaults to the 3-day window (today/yesterday/day-before) — the same
+  // window pruneOldOrders keeps, and what the owner asked to see first.
+  const [mode, setMode] = useState<RangeMode>("recent");
   const range = useMemo(() => getRange(mode), [mode]);
   const { orders, loading, error } = useOrdersInRange(range);
   const spend = useExpensesInRange(range);
@@ -56,6 +59,7 @@ export function ReportsScreen() {
   const failure = error ?? spend.error ?? customers.error;
 
   const chartData = useMemo(() => {
+    if (mode === "recent") return bucketByRecentDay(orders, range.start, language);
     if (mode === "daily") return bucketByHour(orders);
     if (mode === "weekly") return bucketByDayOfWeek(orders, language);
     return bucketByWeekOfMonth(orders, range.start, language);
@@ -92,6 +96,7 @@ export function ReportsScreen() {
 
           <section className="reports-screen__history">
             <h2 className="reports-screen__history-title">{STRINGS.orderHistory[language]}</h2>
+            {orders.length > 0 && <WorkerLegend />}
             {loading ? (
               <p className="reports-screen__status">{STRINGS.loading[language]}</p>
             ) : orders.length === 0 ? (

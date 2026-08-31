@@ -3,6 +3,7 @@ import type { RangeMode } from "../utils/dateRange";
 import "./RangeSegmentedControl.css";
 
 const OPTIONS: Array<{ value: RangeMode; label: Record<Language, string> }> = [
+  { value: "recent", label: { en: "3 Days", ta: "3 நாட்கள்" } },
   { value: "daily", label: { en: "Daily", ta: "தினசரி" } },
   { value: "weekly", label: { en: "Weekly", ta: "வாரம்" } },
   { value: "monthly", label: { en: "Monthly", ta: "மாதம்" } },

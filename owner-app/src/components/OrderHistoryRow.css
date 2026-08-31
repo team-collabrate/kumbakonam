@@ -28,6 +28,12 @@
   flex-direction: column;
 }
 
+.order-row__time-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .order-row__time {
   font-size: var(--text-body);
   font-weight: 600;

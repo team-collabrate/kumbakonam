@@ -101,9 +101,9 @@ export function useOrderSubmit(
       // real network outage, instead of completing immediately the way an
       // offline-first POS has to.
       // Also synchronous and offline-safe, for the same reason — see
-      // billCounter.ts. This is the real, sequential bill number (starts at
-      // 1, never resets, never repeats); the order id is no longer used for
-      // anything the customer sees.
+      // billCounter.ts. This is the real, sequential bill number (starts
+      // at DAILY_BILL_START each calendar day, never repeats within it);
+      // the order id is no longer used for anything the customer sees.
       const billNo = getNextBillNo();
 
       const { orderId, synced } = createOrder({
@@ -119,6 +119,10 @@ export function useOrderSubmit(
         ...(isSplit ? { cashAmount: cart.splitCashAmount, upiAmount: cart.splitUpiAmount } : {}),
         ...(credit ? { customerId: credit.customerId, customerName: credit.name } : {}),
         workerId,
+        // Who's actually on shift (see useActiveWorkerName), not just
+        // whose PIN is signed in — this is what the Owner app's order
+        // history colours its dot by.
+        billedByName: workerName,
         billNo,
       });
       // Background-only: logs a real write failure (e.g. offline the whole
