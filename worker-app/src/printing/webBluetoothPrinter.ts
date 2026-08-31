@@ -25,18 +25,19 @@ const KNOWN_PRINTER_SERVICES: string[] = [
  * A receipt with a logo is ~50 KB: at 180 bytes that is 300+ round trips and
  * a visible wait at the counter, which is what staff were feeling.
  *
- * History on this value, since it has now gone back and forth once: 512 (the
+ * History on this value, since it has now gone back and forth: 512 (the
  * largest value an ATT attribute can hold) was the starting point, but on
  * the printer actually in use it overran the input buffer even with a delay
  * in place, so this was dropped to 128 alongside raising CHUNK_DELAY_MS to
- * 50ms. Back up to 512 now, paired with CHUNK_DELAY_MS cut to 5ms, chasing
- * a ~5s print target on the XP-Q600 specifically — genuinely more
- * aggressive on both axes than the 128/50ms combination that already
- * garbled once, not merely a return to the original numbers. If receipts
- * come out garbled or with missing sections again, the fallback is
- * CHUNK_DELAY_MS, tried incrementally upward (10, then 15, then 20) before
- * touching this value again. CHUNK_FALLBACKS below still steps a rejected
- * write down further if 512 is refused outright.
+ * 50ms. Back up to 512 now, paired with CHUNK_DELAY_MS cut all the way to
+ * 0 (by way of an untested 5ms in between), chasing a ~5s print target on
+ * the XP-Q600 specifically — genuinely more aggressive on both axes than
+ * the 128/50ms combination that already garbled once, not merely a return
+ * to the original numbers. If receipts come out garbled or with missing
+ * sections again, the fallback is CHUNK_DELAY_MS, tried incrementally
+ * upward (10, then 15, then 20) before touching this value again.
+ * CHUNK_FALLBACKS below still steps a rejected write down further if 512
+ * is refused outright.
  */
 const CHUNK_SIZE = 512;
 
@@ -51,11 +52,20 @@ const CHUNK_SIZE = 512;
 const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
 /** Cheap printers have small input buffers; a gap between chunks stops them
- *  overflowing and printing garbage halfway down the receipt. Cut to 5ms
- *  (from 50) chasing a ~5s print target on the XP-Q600 — see CHUNK_SIZE's
- *  comment above for the fallback plan (10, then 15, then 20) if this
- *  turns out to be too aggressive paired with the 512-byte chunk size. */
-const CHUNK_DELAY_MS = 5;
+ *  overflowing and printing garbage halfway down the receipt. Cut to 0 now
+ *  (was 5, was 50 before that) chasing the XP-Q600's ~5s print target —
+ *  jumped here without confirming whether 5ms itself printed clean, so if
+ *  this garbles, that's not yet evidence 5ms would have too. See
+ *  CHUNK_SIZE's comment above for the step-back-up plan (10, then 15, then
+ *  20) if a delay turns out to be necessary after all.
+ *
+ *  At 0 this only matters for a printer using writeValueWithoutResponse
+ *  (see write() below) — with writeValueWithResponse, each write already
+ *  blocks on the printer's own ACK before the next one goes out, so that
+ *  path was never truly back-to-back regardless of this value; without a
+ *  response, this was the *only* pacing between chunks, so 0 here removes
+ *  whatever protection it was providing on that path entirely. */
+const CHUNK_DELAY_MS = 0;
 
 export interface PrinterConnection {
   device: BluetoothDevice;
