@@ -63,16 +63,14 @@ const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
 /** Cheap printers have small input buffers; a gap between chunks stops them
  *  overflowing and printing garbage halfway down the receipt. Left at 0 —
- *  matches the old native app (vpos), which never added an artificial
- *  delay either; its single classic-Bluetooth write had nothing to pace
- *  between, since there was only ever one write. Here, with
- *  writeValueWithResponse preferred again (see write() below), each write
- *  already blocks on the printer's own ACK before the next one goes out,
- *  which is the real analog to what let the old app get away with zero
- *  delay: something is already providing backpressure, just not this
- *  constant. If receipts come out garbled or with missing sections, this
- *  is still the first thing to raise (10, then 15, then 20) before
- *  touching CHUNK_SIZE again. */
+ *  with writeValueWithoutResponse preferred again (see write() below,
+ *  chosen for real-hardware speed: writeValueWithResponse measured 15s on
+ *  the XP-Q600, its ACK turnaround being the actual bottleneck), there is
+ *  no acknowledgement providing backpressure either, so this constant is
+ *  now the *only* pacing on this path — genuinely riskier than it was
+ *  while write-with-response was preferred, not just "unchanged". If
+ *  receipts come out garbled or with missing sections, this is the first
+ *  thing to raise (10, then 15, then 20) before touching CHUNK_SIZE. */
 const CHUNK_DELAY_MS = 0;
 
 export interface PrinterConnection {
@@ -222,16 +220,22 @@ export type PrintEvent =
 /**
  * Sends the ESC/POS byte stream to the printer, chunked to fit BLE writes.
  *
- * Prefers writeValueWithResponse again (was forced onto
- * writeValueWithoutResponse unconditionally for a round of "aggressive
- * fire-and-forget" tuning) — waiting for the printer's own ACK is the
- * closest BLE equivalent to what let the old native app (vpos) get away
- * with a single unchunked write and zero delay: a classic-Bluetooth
- * RFCOMM socket has the OS's own flow control built in underneath it: it
- * silently blocks/paces the caller as needed. GATT has no such built-in
- * mechanism — writeValueWithResponse's ACK is the nearest thing to it;
- * writeValueWithoutResponse has none, so a printer that supports both
- * genuinely needs one or the other to get any backpressure at all.
+ * Prefers writeValueWithoutResponse again — measured at 15s on the real
+ * XP-Q600 with writeValueWithResponse preferred (43 writes at 512 bytes
+ * each, ~349ms per write), which is far more than raw BLE connection-
+ * interval overhead (7.5-40ms) explains; the printer's own ACK turnaround
+ * is the bottleneck, not the transport or CHUNK_SIZE/CHUNK_DELAY_MS, both
+ * already at their limits. Skipping the ACK removes that wait entirely.
+ *
+ * This reintroduces the real risk flagged the last time this was tried:
+ * with no response and CHUNK_DELAY_MS at 0, there is genuinely no
+ * backpressure at all on this path — a printer whose buffer can't keep up
+ * with an unacknowledged stream has nothing to signal that until it's
+ * already garbled the paper. If that happens, CHUNK_DELAY_MS is the first
+ * thing to raise (10, then 15, then 20) before touching anything else.
+ *
+ * Falls back to writeValueWithResponse only if the characteristic doesn't
+ * advertise writeWithoutResponse support at all.
  *
  * Returns the connection actually used, since a dropped link is
  * re-established here and yields fresh GATT objects the caller should
@@ -250,16 +254,25 @@ export async function printToDevice(
   }
 
   const { characteristic } = active;
-  const canWriteWithResponse = characteristic.properties.write;
+  const canWriteWithoutResponse = characteristic.properties.writeWithoutResponse;
 
   // Uint8Array is generic over its buffer since TS 5.7, and BufferSource
   // rejects the SharedArrayBuffer case — so this has to be the narrow form
   // that `data.slice()` actually returns, not a bare Uint8Array.
+  //
+  // Still awaited either way — see the git history on this line before
+  // changing it back to a genuinely un-awaited fire-and-forget call: that
+  // shape reports every chunk (and the whole print) as instantly complete
+  // regardless of whether the browser has even started transmitting, and
+  // silently drops any chunk the printer rejects instead of surfacing it
+  // to the retry/fallback path below. writeValueWithoutResponse's promise
+  // still settles once Chrome has queued the write — what's genuinely
+  // gone is only the printer's own acknowledgement.
   const write = async (chunk: Uint8Array<ArrayBuffer>) => {
-    if (canWriteWithResponse) {
-      await characteristic.writeValueWithResponse(chunk);
-    } else {
+    if (canWriteWithoutResponse) {
       await characteristic.writeValueWithoutResponse(chunk);
+    } else {
+      await characteristic.writeValueWithResponse(chunk);
     }
     await sleep(CHUNK_DELAY_MS);
   };
