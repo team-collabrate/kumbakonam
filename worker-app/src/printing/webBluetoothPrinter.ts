@@ -31,25 +31,23 @@ const KNOWN_PRINTER_SERVICES: string[] = [
  * 512 with the delay cut to 0, then past it to 1024 chasing a ~5s print
  * target on the XP-Q600.
  *
- * Back down to 512 — the real platform ceiling, not a tuning choice. This
- * came out of decompiling the old native app (vpos) to see how it printed
- * to the same hardware: it used classic Bluetooth (RFCOMM/SPP, a plain
- * OutputStream) and sent the *entire* receipt in one write() call, no
- * chunking, no delay, at all — something only possible because a raw
- * serial socket has no per-message size limit; the OS handles
- * fragmentation and flow control underneath it. Web Bluetooth cannot open
- * that kind of socket at all (BLE/GATT only, a hard browser restriction,
- * not a setting), and a GATT write is capped at 512 bytes *by the
- * browser*, full stop, regardless of what's passed in — 1024 was never
- * transmitting as 1024, it was failing every single write and immediately
- * stepping down through CHUNK_FALLBACKS to 512 anyway. Setting it to 512
- * directly just stops paying for that guaranteed-to-fail first attempt on
- * every print.
+ * Went to 512 next — the real platform ceiling for a single GATT write,
+ * not a tuning choice (this came out of decompiling the old native app,
+ * vpos, to see how it printed to the same hardware over classic Bluetooth
+ * — see git history for the full comparison). At 512B with
+ * writeValueWithoutResponse and CHUNK_DELAY_MS=0, a real print came back
+ * with text missing — no ACK means no delivery guarantee, so a dropped
+ * write is just gone. Raising the delay (to 10) was the first fallback
+ * step; this is the second, tried instead: back to 0 delay, but at half
+ * the chunk size, on the theory that whatever's dropping writes at 512B
+ * might not at 256B. Untested which of the two actually fixes it — both
+ * are live candidates right now, not a confirmed-good progression.
  *
- * If receipts come out garbled or with missing sections, CHUNK_DELAY_MS is
- * the fallback to raise first (10, then 15, then 20).
+ * If this still garbles or drops text, CHUNK_DELAY_MS is still the next
+ * lever (10, then 15, then 20) at this same 256B size before going
+ * smaller again.
  */
-const CHUNK_SIZE = 512;
+const CHUNK_SIZE = 256;
 
 /**
  * Progressively smaller writes to fall back to, ending at the 20 bytes a
@@ -62,14 +60,12 @@ const CHUNK_SIZE = 512;
 const CHUNK_FALLBACKS = [512, 256, 128, 64, 20];
 
 /** Cheap printers have small input buffers; a gap between chunks stops them
- *  overflowing and printing garbage halfway down the receipt. Raised from
- *  0 to 10 — real print at 0 with writeValueWithoutResponse preferred
- *  (see write() below) came back with text missing from the receipt, the
- *  predicted failure mode for that combination: with no ACK, there is no
- *  delivery guarantee at all, so a dropped write is just gone, not
- *  retried or reported. This is the first step of the documented
- *  fallback (10, then 15, then 20) before touching CHUNK_SIZE. */
-const CHUNK_DELAY_MS = 10;
+ *  overflowing and printing garbage halfway down the receipt. Back to 0 —
+ *  see CHUNK_SIZE's comment above: this is a parallel experiment (smaller
+ *  chunks instead of a delay) to the 10ms tried at 512B, not a confirmed
+ *  step in one direction. If writes are still getting dropped at 256B/0,
+ *  raise this one next (10, then 15, then 20) before shrinking further. */
+const CHUNK_DELAY_MS = 0;
 
 export interface PrinterConnection {
   device: BluetoothDevice;
