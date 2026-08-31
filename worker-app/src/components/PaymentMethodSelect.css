@@ -7,8 +7,11 @@
 }
 
 .payment-method__option {
-  /* Above the 44px minimum: these are hit at speed, one-handed, mid-rush. */
-  min-height: 56px;
+  /* Exactly the tap-target floor, not comfortably above it — at the cart
+     panel's narrower real width (see WorkerHome.css) a 56px-tall button in
+     a ~110px-wide column read as oversized/blocky rather than reassuring.
+     44px keeps it a real, still-easy target without dominating the panel. */
+  min-height: var(--tap-target-min);
   display: flex;
   align-items: center;
   justify-content: center;

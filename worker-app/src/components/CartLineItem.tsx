@@ -9,7 +9,6 @@ const STRINGS = {
   quantity: { en: "quantity", ta: "எண்ணிக்கை" },
   remove: { en: "Remove", ta: "நீக்கு" },
   fromCart: { en: "from cart", ta: "கார்ட்டிலிருந்து" },
-  notePlaceholder: { en: "Add a note (e.g. less sugar)", ta: "குறிப்பு சேர் (எ.கா. குறைவான சர்க்கரை)" },
 };
 
 export interface CartLineItemProps {
@@ -17,10 +16,9 @@ export interface CartLineItemProps {
   onIncrement: (itemId: string) => void;
   onDecrement: (itemId: string) => void;
   onRemove: (itemId: string) => void;
-  onNoteChange: (itemId: string, note: string) => void;
 }
 
-export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteChange }: CartLineItemProps) {
+export function CartLineItem({ line, onIncrement, onDecrement, onRemove }: CartLineItemProps) {
   const { language } = useLanguage();
   const displayName = translateItemName(line, language);
   return (
@@ -62,14 +60,6 @@ export function CartLineItem({ line, onIncrement, onDecrement, onRemove, onNoteC
           ×
         </button>
       </div>
-
-      <input
-        type="text"
-        className="cart-line__note"
-        placeholder={STRINGS.notePlaceholder[language]}
-        value={line.note}
-        onChange={(e) => onNoteChange(line.itemId, e.target.value)}
-      />
     </li>
   );
 }

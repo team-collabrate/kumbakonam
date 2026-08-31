@@ -120,7 +120,6 @@ export function CartPanel({
                 onIncrement={cart.incrementQty}
                 onDecrement={cart.decrementQty}
                 onRemove={cart.removeLine}
-                onNoteChange={cart.setNote}
               />
             ))}
           </ul>
