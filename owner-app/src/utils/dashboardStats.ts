@@ -16,8 +16,6 @@ export interface DashboardStats {
   topItems: TopItem[];
 }
 
-const TOP_ITEMS_LIMIT = 5;
-
 /** Client-side aggregation per Data Model §6 — acceptable at single-cafe scale. */
 export function computeDashboardStats(allOrders: Order[]): DashboardStats {
   // A voided order is a mistake the owner cancelled after the fact, not a
@@ -46,10 +44,12 @@ export function computeDashboardStats(allOrders: Order[]): DashboardStats {
       byName.set(item.name, { qty: (existing?.qty ?? 0) + item.qty, nameTa: existing?.nameTa ?? item.nameTa });
     }
   }
+  // Every item billed today, ranked by quantity — not just the top 5 (was
+  // TOP_ITEMS_LIMIT-capped; the owner wants the full list here, the "top"
+  // in the name is now just "ranked", not "shortened to the leaders").
   const topItems = Array.from(byName.entries())
     .map(([name, { qty, nameTa }]) => ({ name, nameTa, qty }))
-    .sort((a, b) => b.qty - a.qty)
-    .slice(0, TOP_ITEMS_LIMIT);
+    .sort((a, b) => b.qty - a.qty);
 
   return { totalSales, orderCount, avgOrderValue, gpayCollected, topItems };
 }

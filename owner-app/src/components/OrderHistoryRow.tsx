@@ -93,8 +93,8 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
                 row — this is the one payment method where "how was it
                 settled" isn't the point, "who still owes for it" is. */}
             {order.paymentMethod === "credit" && order.customerName ? ` · ${order.customerName}` : ""}
-            {isVoided && ` · ${STRINGS.voided[language]}`}
           </span>
+          {isVoided && <span className="order-row__voided-badge">{STRINGS.voided[language]}</span>}
         </div>
         <span className="order-row__total">{formatCurrency(order.total)}</span>
         <span className={`order-row__chevron ${expanded ? "is-expanded" : ""}`} aria-hidden="true">
@@ -157,12 +157,12 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
             </div>
           )}
 
-          {/* Owner-only by construction — this row only ever renders inside
-              the owner app, there's no worker-facing equivalent of this
-              screen. The Firestore rule enforces the same boundary
-              server-side (voidedBy must name an active owner), so this
-              isn't the only thing standing between a worker and this
-              button — see firestore.rules. */}
+          {/* This screen's own void button, unrestricted by time — the
+              owner's separate, any-order-any-age path (see firestore.rules).
+              The Worker app has its own, narrower version of this same
+              action (RecentBillsModal: last 3 bills, 30-minute window),
+              which is why the rule now accepts either actor rather than
+              gating void to owner alone. */}
           {!isVoided && (
             <button type="button" className="order-row__void" onClick={() => setConfirmingVoid(true)}>
               {STRINGS.voidAction[language]}

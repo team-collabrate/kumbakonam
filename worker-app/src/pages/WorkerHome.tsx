@@ -18,6 +18,7 @@ import { SplitPaymentModal } from "../components/SplitPaymentModal";
 import { ExpenseModal } from "../components/ExpenseModal";
 import { CreditCustomerModal } from "../components/CreditCustomerModal";
 import { KhataModal } from "../components/KhataModal";
+import { RecentBillsModal } from "../components/RecentBillsModal";
 import { useMenu } from "../hooks/useMenu";
 import { useMenuCategories } from "../hooks/useMenuCategories";
 import { useActiveWorkerName } from "../hooks/useActiveWorkerName";
@@ -26,9 +27,9 @@ import { useOrderSubmit } from "../hooks/useOrderSubmit";
 import { usePrinter } from "../hooks/usePrinter";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useOutstandingCustomers } from "../hooks/useOutstandingCustomers";
+import { useRecentOrders } from "../hooks/useRecentOrders";
 import type { BillInput } from "../printing/receipt";
-import { renderReceiptCanvas } from "../printing/receiptCanvas";
-import { buildRasterReceipt } from "../printing/escposRaster";
+import { prepareReceiptRaster } from "../printing/receiptCanvas";
 import "./WorkerHome.css";
 
 const EXPENSE_FAILED = {
@@ -59,7 +60,9 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
   const [expenseRetry, setExpenseRetry] = useState<{ name: string; amount: string } | null>(null);
   const [creditOpen, setCreditOpen] = useState(false);
   const [khataOpen, setKhataOpen] = useState(false);
+  const [recentBillsOpen, setRecentBillsOpen] = useState(false);
   const outstanding = useOutstandingCustomers();
+  const recentOrders = useRecentOrders(3);
 
   // PrintDiagnosticsOverlay stays up for a few seconds after a print
   // finishes (so the final KB/s reading is actually readable) rather than
@@ -81,8 +84,8 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
       if (!print) return;
       if (printer.status === "ready") {
         try {
-          const canvas = await renderReceiptCanvas(bill);
-          if (await printer.print(buildRasterReceipt(canvas))) return;
+          const { bytes, timing } = await prepareReceiptRaster(bill);
+          if (await printer.print(bytes, timing)) return;
         } catch (err) {
           console.error("Receipt rendering failed", err);
         }
@@ -104,8 +107,8 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
 
   const retryPrint = useCallback(async () => {
     if (!billToShow) return;
-    const canvas = await renderReceiptCanvas(billToShow);
-    if (await printer.print(buildRasterReceipt(canvas))) {
+    const { bytes, timing } = await prepareReceiptRaster(billToShow);
+    if (await printer.print(bytes, timing)) {
       setBillToShow(null);
     }
   }, [billToShow, printer]);
@@ -121,6 +124,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
     setExpensesOpen(true);
   }, []);
   const openKhata = useCallback(() => setKhataOpen(true), []);
+  const openRecentBills = useCallback(() => setRecentBillsOpen(true), []);
 
   // Choosing Split is only half the decision — the amounts still have to be
   // entered, so the dialog opens straight away whether the method came from
@@ -192,6 +196,7 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
         onOpenKhata={openKhata}
         onOpenExpenses={openExpenses}
         onOpenPrinterSetup={openPrinterSetup}
+        onOpenRecentBills={openRecentBills}
         onLogout={onLogout}
       />
 
@@ -271,6 +276,15 @@ export function WorkerHome({ sessionUser, onLogout }: WorkerHomeProps) {
           loading={outstanding.loading}
           workerId={sessionUser.userId}
           onClose={() => setKhataOpen(false)}
+        />
+      )}
+
+      {recentBillsOpen && (
+        <RecentBillsModal
+          orders={recentOrders.orders}
+          loading={recentOrders.loading}
+          workerId={sessionUser.userId}
+          onClose={() => setRecentBillsOpen(false)}
         />
       )}
 

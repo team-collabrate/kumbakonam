@@ -71,6 +71,20 @@ export function PrinterIcon() {
   );
 }
 
+/** Delete a recent bill — a trash can, the one glyph this reads as
+ *  unambiguously across both languages this sidebar runs in. */
+export function DeleteIcon() {
+  return (
+    <svg {...BASE}>
+      <path d="M5 7h14" />
+      <path d="M9.5 7V5.3a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3V7" />
+      <path d="M7 7l.8 12.1A1.6 1.6 0 0 0 9.4 20.5h5.2a1.6 1.6 0 0 0 1.6-1.4L17 7" />
+      <path d="M10.3 10.5v6.2" />
+      <path d="M13.7 10.5v6.2" />
+    </svg>
+  );
+}
+
 /** Log out — a door left open with the way out through it, closer to what
  *  the action means (re-enter your PIN to come back) than a power symbol. */
 export function LogoutIcon() {

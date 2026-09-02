@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { SyncStatusBadge, pruneOldOrders, useOnlineStatus, type SessionUser } from "@kumbakonam/shared";
+import { archiveAndPruneOldData, SyncStatusBadge, useOnlineStatus, type SessionUser } from "@kumbakonam/shared";
 import { BottomTabBar, type TabKey } from "../components/BottomTabBar";
 import { DashboardScreen } from "./DashboardScreen";
 import { ReportsScreen } from "./ReportsScreen";
@@ -24,13 +24,16 @@ export function OwnerHome({ sessionUser, onLogout }: OwnerHomeProps) {
   const online = useOnlineStatus();
 
   // Best-effort, once per app load — this is what makes the 3-day retention
-  // "automatic" without Cloud Functions (see pruneOldOrders' own comment
-  // for why, and the limitation: an owner who doesn't open the app for a
-  // few days just means the next open prunes a slightly bigger backlog,
-  // not that anything goes uncleaned). Runs regardless of which tab is
-  // open, so it's here rather than inside ReportsScreen.
+  // "automatic" without Cloud Functions (see archiveAndPruneOldData's own
+  // comment for why, and the limitation: an owner who doesn't open the app
+  // for a few days just means the next open archives a slightly bigger
+  // backlog, not that anything goes uncleaned). Runs regardless of which
+  // tab is open, so it's here rather than inside ReportsScreen. Saves each
+  // affected day's totals to `dailySummaries` before deleting that day's
+  // orders/expenses — unlike the old pruneOldOrders, history doesn't just
+  // vanish once it falls out of the 3-day detail window.
   useEffect(() => {
-    pruneOldOrders(3).catch((err) => console.error("Order pruning failed (non-fatal)", err));
+    archiveAndPruneOldData(3).catch((err) => console.error("Data archiving/pruning failed (non-fatal)", err));
   }, []);
 
   return (

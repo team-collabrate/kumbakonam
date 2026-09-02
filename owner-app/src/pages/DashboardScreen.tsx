@@ -3,12 +3,15 @@ import { formatCurrency, useLanguage } from "@kumbakonam/shared";
 import { getRange } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
+import { useDailySummariesInRange } from "../hooks/useDailySummariesInRange";
 import { useCustomers } from "../hooks/useCustomers";
 import { computeDashboardStats } from "../utils/dashboardStats";
 import { bucketByDayOfWeek, bucketByWeekOfMonth } from "../utils/chartBuckets";
 import { StatCard } from "../components/StatCard";
 import { TopItemsList } from "../components/TopItemsList";
 import { ValueGraphCard, type GraphMode } from "../components/ValueGraphCard";
+import { OwedCustomersModal } from "../components/OwedCustomersModal";
+import { TodaySpendingModal } from "../components/TodaySpendingModal";
 import "./DashboardScreen.css";
 
 const STRINGS = {
@@ -34,6 +37,8 @@ const STRINGS = {
 export function DashboardScreen() {
   const { language } = useLanguage();
   const [graphMode, setGraphMode] = useState<GraphMode>("weekly");
+  const [owedOpen, setOwedOpen] = useState(false);
+  const [spendingOpen, setSpendingOpen] = useState(false);
 
   const dailyRange = useMemo(() => getRange("daily"), []);
   const weeklyRange = useMemo(() => getRange("weekly"), []);
@@ -49,9 +54,23 @@ export function DashboardScreen() {
   const dailySpend = useExpensesInRange(dailyRange);
   const customers = useCustomers();
 
+  // Anything older than 3 days no longer exists as live orders (see
+  // dailySummary.service.ts) — its total comes from here instead. A day
+  // only ever has ONE of the two sources contribute a nonzero figure, so
+  // adding them is safe, never a double count (see
+  // useDailySummariesInRange's own comment).
+  const weeklyArchived = useDailySummariesInRange(weeklyRange);
+  const monthlyArchived = useDailySummariesInRange(monthlyRange);
+
   const dailyStats = useMemo(() => computeDashboardStats(daily.orders), [daily.orders]);
-  const weeklyTotal = useMemo(() => computeDashboardStats(weekly.orders).totalSales, [weekly.orders]);
-  const monthlyTotal = useMemo(() => computeDashboardStats(monthly.orders).totalSales, [monthly.orders]);
+  const weeklyTotal = useMemo(
+    () => computeDashboardStats(weekly.orders).totalSales + weeklyArchived.totalSales,
+    [weekly.orders, weeklyArchived.totalSales],
+  );
+  const monthlyTotal = useMemo(
+    () => computeDashboardStats(monthly.orders).totalSales + monthlyArchived.totalSales,
+    [monthly.orders, monthlyArchived.totalSales],
+  );
   const yesterdayTotal = useMemo(() => computeDashboardStats(yesterday.orders).totalSales, [yesterday.orders]);
 
   // A real day-over-day change, not a decorative percentage — null when
@@ -72,7 +91,14 @@ export function DashboardScreen() {
   }, [graphMode, weekly.orders, monthly.orders, monthlyRange.start, language]);
 
   const graphLoading = graphMode === "weekly" ? weekly.loading : monthly.loading;
-  const error = daily.error ?? weekly.error ?? monthly.error ?? dailySpend.error ?? customers.error;
+  const error =
+    daily.error ??
+    weekly.error ??
+    monthly.error ??
+    dailySpend.error ??
+    customers.error ??
+    weeklyArchived.error ??
+    monthlyArchived.error;
 
   const owedCount = customers.outstanding.length;
   const owedCaption =
@@ -112,7 +138,24 @@ export function DashboardScreen() {
             <p className="today-card__value">{formatCurrency(dailyStats.totalSales)}</p>
 
             <dl className="today-card__split">
-              <div>
+              {/* Clickable — opens TodaySpendingModal, listing what the
+                  worker actually typed for each expense (Expense.name),
+                  not just this total. A <div> with button semantics, not a
+                  real <button>, since <dl>'s content model wants dt/dd
+                  pairs wrapped in plain elements — the same reasoning
+                  MenuItemCard's card-level tap target uses. */}
+              <div
+                className="today-card__split-clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => setSpendingOpen(true)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSpendingOpen(true);
+                  }
+                }}
+              >
                 <dt>{STRINGS.spent[language]}</dt>
                 <dd className={dailySpend.totalSpent > 0 ? "is-spend" : ""}>
                   {dailySpend.totalSpent > 0 ? "−" : ""}
@@ -148,7 +191,10 @@ export function DashboardScreen() {
               own group rather than sitting beside the day's counts. */}
           <h2 className="dashboard-screen__group">{STRINGS.owed[language]}</h2>
 
-          <section className="owed-card">
+          {/* A button, not a static card — tapping it opens the same detail
+              ReportsScreen shows inline (who owes what, with Collect), as a
+              pop-up here instead of a navigation away from the dashboard. */}
+          <button type="button" className="owed-card" onClick={() => setOwedOpen(true)}>
             <div className="owed-card__text">
               <p className="owed-card__label">{STRINGS.onCredit[language]}</p>
               <p className="owed-card__caption">{owedCaption}</p>
@@ -156,7 +202,23 @@ export function DashboardScreen() {
             <p className={`owed-card__value ${owedCount > 0 ? "is-spend" : ""}`}>
               {formatCurrency(customers.totalOutstanding)}
             </p>
-          </section>
+          </button>
+
+          {owedOpen && (
+            <OwedCustomersModal
+              customers={customers.outstanding}
+              totalOutstanding={customers.totalOutstanding}
+              onClose={() => setOwedOpen(false)}
+            />
+          )}
+
+          {spendingOpen && (
+            <TodaySpendingModal
+              expenses={dailySpend.expenses}
+              totalSpent={dailySpend.totalSpent}
+              onClose={() => setSpendingOpen(false)}
+            />
+          )}
 
           <section className="dashboard-screen__section">
             <h2 className="dashboard-screen__section-title">{STRINGS.topItemsToday[language]}</h2>

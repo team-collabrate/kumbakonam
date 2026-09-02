@@ -109,6 +109,17 @@
   min-width: 0;
 }
 
+/* The Spent figure only — opens TodaySpendingModal. */
+.today-card__split-clickable {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: transform 110ms var(--ease-out);
+}
+
+.today-card__split-clickable:active {
+  transform: scale(0.97);
+}
+
 /* Flush right, so Net lands on the card's right text edge — which is the
    same edge the cards below end on. Matching the *inner* grid to the outer
    one instead would have needed a contrived gap, and this repeats the
@@ -136,7 +147,11 @@
 
 /* ---- Owed to you ----------------------------------------------------- */
 
+/* Now a <button> (opens OwedCustomersModal), so this resets the browser's
+   own button defaults (block width, left-aligned text, pointer cursor) on
+   top of the same look the static card had. */
 .owed-card {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -146,6 +161,13 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 110ms var(--ease-out);
+}
+
+.owed-card:active {
+  transform: scale(0.98);
 }
 
 .owed-card__text {

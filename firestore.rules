@@ -84,24 +84,38 @@ service cloud.firestore {
     // Update used to be isSignedIn()-only (see the old limitation note
     // this replaced) — that meant a worker session could, in principle,
     // edit or void any order, which is exactly backwards: voiding a
-    // mistaken bill has to be something only the owner can do (Data Model
-    // requirement — a worker mis-billing something is the case this
-    // exists to fix, so the fix can't be a path the worker can also
-    // trigger). Now scoped to precisely the shape voidOrder() writes:
-    // voidedBy must name a real, active owner, and it can only move a
-    // non-voided order to voided, never anything else. Any other kind of
-    // order edit (e.g. the still-unbuilt discount-correction path
-    // UpdateOrderInput exists for) needs its own actor-verified shape
-    // before it can be allowed here.
+    // mistaken bill used to be owner-only for that reason. Reopened on
+    // explicit product decision: a worker may now void one of their own
+    // just-billed orders too (Worker app's "delete recent bill" panel),
+    // with the owner-only restriction's original worry — a worker quietly
+    // erasing their own mistake — addressed differently: the order stays
+    // fully visible in the owner app either way, red-labeled as voided, so
+    // there's no silent path, only a fast one. Bounded two ways so this
+    // can't become a general "undo any bill" tool: a worker can only void
+    // an order within 30 minutes of billing it (createdAt-relative, not
+    // trusted to "was one of the last 3" — that's a UI-only limit, not
+    // something a security rule can rank across documents), while the
+    // owner keeps the original unrestricted, any-time ability. Both are
+    // scoped to precisely the shape voidOrder() writes: voidedBy must name
+    // a real, active worker/owner, and it can only move a non-voided order
+    // to voided, never anything else. Any other kind of order edit (e.g.
+    // the still-unbuilt discount-correction path UpdateOrderInput exists
+    // for) needs its own actor-verified shape before it can be allowed
+    // here.
     match /orders/{orderId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && isActiveUserWithRole(request.resource.data.workerId, ['worker', 'owner']);
       allow update: if isSignedIn() && (
         // Void — see the comment above.
-        (isActiveUserWithRole(request.resource.data.voidedBy, ['owner'])
-          && request.resource.data.status == 'voided'
-          && resource.data.status != 'voided')
+        (request.resource.data.status == 'voided'
+          && resource.data.status != 'voided'
+          && (
+            isActiveUserWithRole(request.resource.data.voidedBy, ['owner'])
+            ||
+            (isActiveUserWithRole(request.resource.data.voidedBy, ['worker'])
+              && request.time < resource.data.createdAt + duration.value(30, 'm'))
+          ))
         ||
         // markOrderSynced() — touches syncedAt and nothing else, by the
         // same worker (or owner) the order already belongs to. Narrow on
@@ -115,11 +129,14 @@ service cloud.firestore {
       // cancellation path, specifically to keep the bill-number sequence
       // and audit trail intact. Changed on explicit product decision: the
       // owner only wants the last 3 days searchable, older orders purged
-      // automatically (see pruneOldOrders in orders.service.ts, called
-      // from the Owner app). The floor is enforced here too, not just
-      // trusted to the client — createdAt has to be more than 3 days in
-      // the past, so a compromised or buggy client can prune old orders
-      // early, never a recent one.
+      // automatically (see archiveAndPruneOldData in
+      // dailySummary.service.ts, called from the Owner app — it saves
+      // each day's totals to `dailySummaries` before deleting that day's
+      // orders, so pruning detail no longer loses the history a report
+      // needs). The floor is enforced here too, not just trusted to the
+      // client — createdAt has to be more than 3 days in the past, so a
+      // compromised or buggy client can prune old orders early, never a
+      // recent one.
       allow delete: if isSignedIn() && request.time > resource.data.createdAt + duration.value(3, 'd');
     }
 
@@ -129,6 +146,18 @@ service cloud.firestore {
     // so any signed-in session may read/bump it — the worst a bad write
     // here does is a wrong number on a paper receipt, not a wrong balance.
     match /counters/{counterId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // dailySummaries — permanent per-day totalSales/totalSpent/orderCount,
+    // written once each business day falls out of the 3-day detail window
+    // (see archiveAndPruneOldData). A derived reporting figure, not the
+    // ledger of truth (orders/expenses are, while they still exist) — same
+    // looseness as `counters` above and for the same reason: the worst a
+    // bad write here does is a wrong number on a report, not a wrong
+    // balance anywhere real money is tracked.
+    match /dailySummaries/{date} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
     }

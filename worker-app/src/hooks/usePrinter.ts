@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { useLanguage } from "@kumbakonam/shared";
 import {
+  BluetoothDisabledError,
+  BluetoothPermissionDeniedError,
   connectClassic,
   getStoredPrinterConnection,
   printClassic,
@@ -18,6 +20,7 @@ import {
   type PrinterConnection,
   type PrintEvent,
 } from "../printing/webBluetoothPrinter";
+import type { ReceiptRasterTiming } from "../printing/receiptCanvas";
 
 /**
  * Two transports, chosen once at startup and never mixed mid-session:
@@ -82,7 +85,12 @@ export interface UsePrinterResult {
   connect: () => Promise<void>;
   /** Native only — call with an address from printerDevices once the worker taps one. */
   selectPrinter: (address: string) => Promise<void>;
-  print: (data: Uint8Array) => Promise<boolean>;
+  /** `renderTiming` is optional purely so existing callers keep compiling —
+   *  pass it (from receiptCanvas.ts's prepareReceiptRaster) whenever the
+   *  data came from a receipt render, so the render + raster-encode time
+   *  shows up in printLogs next to the Bluetooth write time instead of
+   *  print-call time looking like it's 100% the write. */
+  print: (data: Uint8Array, renderTiming?: ReceiptRasterTiming) => Promise<boolean>;
   /** [PRINT START] / per-chunk / [COMPLETE] lines from the most recent print — cleared at the start of the next one. */
   printLogs: string[];
   /** null when nothing is printing (before the first print, and again once one finishes). */
@@ -92,6 +100,18 @@ export interface UsePrinterResult {
 const MESSAGES = {
   noDevice: { en: "No printer selected.", ta: "பிரிண்டர் தேர்ந்தெடுக்கப்படவில்லை." },
   connectFailed: { en: "Could not connect to the printer.", ta: "பிரிண்டரை இணைக்க முடியவில்லை." },
+  // Native/classic path only — Android won't let this app turn Bluetooth on
+  // by itself (see classicBluetoothPrinter.ts's BluetoothDisabledError), so
+  // this is the one case worth telling the worker exactly what to do
+  // instead of the generic connectFailed message above.
+  bluetoothOff: {
+    en: "Bluetooth is off. Turn it on in the tablet's Settings, then try again.",
+    ta: "புளூடூத் ஆஃப் செய்யப்பட்டுள்ளது. டேப்லெட்டின் அமைப்புகளில் அதை ஆன் செய்து மீண்டும் முயற்சிக்கவும்.",
+  },
+  bluetoothPermissionDenied: {
+    en: "This app needs Bluetooth/Location permission. Enable it in Settings > Apps > this app > Permissions.",
+    ta: "இந்த ஆப்ஸுக்கு புளூடூத்/லொகேஷன் அனுமதி தேவை. அமைப்புகள் > ஆப்ஸ் > இந்த ஆப் > அனுமதிகள் இல் அதை இயக்கவும்.",
+  },
   printFailed: {
     en: "Printer not responding. Check it's on and in range, then try again.",
     ta: "பிரிண்டர் பதிலளிக்கவில்லை. அது இயங்குகிறதா, அருகில் உள்ளதா எனப் பார்த்து மீண்டும் முயற்சிக்கவும்.",
@@ -108,6 +128,15 @@ const MESSAGES = {
  *  which is enough to still read as live. Only the web/GATT path can even
  *  produce enough events for this to matter — the native path emits one. */
 const UI_FLUSH_INTERVAL_MS = 150;
+
+/** Picks the specific message for a scan/connect failure when the error is
+ *  one of classicBluetoothPrinter.ts's two named cases, or the generic
+ *  fallback otherwise — shared by connect() and selectPrinter() below. */
+function classicErrorMessage(err: unknown, language: "en" | "ta"): string {
+  if (err instanceof BluetoothDisabledError) return MESSAGES.bluetoothOff[language];
+  if (err instanceof BluetoothPermissionDeniedError) return MESSAGES.bluetoothPermissionDenied[language];
+  return MESSAGES.connectFailed[language];
+}
 
 /** Bluetooth pairing + ESC/POS printing — classic SPP natively (per TDD
  *  §6's "match the old app" follow-up), BLE/GATT as the web fallback. */
@@ -210,7 +239,7 @@ export function usePrinter(): UsePrinterResult {
         setStatus("picking");
       } catch (err) {
         console.error("Printer scan failed", err);
-        setError(MESSAGES.connectFailed[language]);
+        setError(classicErrorMessage(err, language));
         setStatus(classicConnectionRef.current ? "ready" : "unpaired");
       }
       return;
@@ -245,7 +274,7 @@ export function usePrinter(): UsePrinterResult {
         setStatus("ready");
       } catch (err) {
         console.error("Printer connect failed", err);
-        setError(MESSAGES.connectFailed[language]);
+        setError(classicErrorMessage(err, language));
         setStatus(classicConnectionRef.current ? "ready" : "unpaired");
       }
     },
@@ -253,11 +282,16 @@ export function usePrinter(): UsePrinterResult {
   );
 
   const print = useCallback(
-    async (data: Uint8Array): Promise<boolean> => {
+    async (data: Uint8Array, renderTiming?: ReceiptRasterTiming): Promise<boolean> => {
       if (PLATFORM === "native") {
         if (!classicConnectionRef.current) return false;
 
         logsRef.current = [`[PRINT START] Size: ${(data.length / 1024).toFixed(1)} KB`];
+        if (renderTiming) {
+          logsRef.current.push(
+            `[RENDER] canvas: ${renderTiming.renderMs.toFixed(0)}ms, raster encode: ${renderTiming.rasterMs.toFixed(0)}ms`,
+          );
+        }
         setPrintLogs(logsRef.current);
         setPrintProgress({
           chunkIndex: 0,
@@ -272,18 +306,24 @@ export function usePrinter(): UsePrinterResult {
         try {
           const startedAt = performance.now();
           await printClassic(classicConnectionRef.current, data);
-          const elapsedMs = performance.now() - startedAt;
-          const kbPerSec = elapsedMs > 0 ? data.length / 1024 / (elapsedMs / 1000) : 0;
+          const writeMs = performance.now() - startedAt;
+          const kbPerSec = writeMs > 0 ? data.length / 1024 / (writeMs / 1000) : 0;
+          // The wall-clock time from "tapping Print" to "receipt done" is
+          // render + raster-encode + this write, all sequential — not
+          // something that needs its own separate stopwatch at the call
+          // site, since summing the three already-measured legs is exact.
+          const totalMs = writeMs + (renderTiming ? renderTiming.renderMs + renderTiming.rasterMs : 0);
 
           logsRef.current.push(
-            `[COMPLETE] ${data.length} bytes in ${Math.round(elapsedMs)}ms = ${kbPerSec.toFixed(1)} KB/s (single write, classic SPP)`,
+            `[COMPLETE] write: ${Math.round(writeMs)}ms (${kbPerSec.toFixed(1)} KB/s, single write, classic SPP)` +
+              (renderTiming ? ` | total: ${Math.round(totalMs)}ms` : ""),
           );
           setPrintLogs([...logsRef.current]);
           setPrintProgress({
             chunkIndex: 1,
             bytesSent: data.length,
             totalBytes: data.length,
-            elapsedMs,
+            elapsedMs: writeMs,
             kbPerSec,
             etaMs: 0,
             fallbackCount: 0,

@@ -141,6 +141,22 @@
   text-decoration: line-through;
 }
 
+/* The one thing on a voided row that should NOT read as muted — everything
+   else dims to say "doesn't count", this says "why", and needs to be seen
+   at a glance without expanding the row. */
+.order-row__voided-badge {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm, 4px);
+  background: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  color: var(--color-danger);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: var(--tracking-caption);
+  text-transform: uppercase;
+}
+
 .order-row__void {
   margin-top: var(--space-3);
   padding: var(--space-2) var(--space-3);

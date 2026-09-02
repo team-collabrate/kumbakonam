@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ConfirmDialog, SyncStatusBadge, useLanguage, type SyncStatus } from "@kumbakonam/shared";
-import { KhataIcon, LanguageIcon, LogoutIcon, PrinterIcon, ReceiptIcon } from "./SidebarIcons";
+import { DeleteIcon, KhataIcon, LanguageIcon, LogoutIcon, PrinterIcon, ReceiptIcon } from "./SidebarIcons";
 import { WorkerNameSelect } from "./WorkerNameSelect";
 import "./Sidebar.css";
 
@@ -12,6 +12,7 @@ export interface SidebarProps {
   onOpenKhata: () => void;
   onOpenExpenses: () => void;
   onOpenPrinterSetup: () => void;
+  onOpenRecentBills: () => void;
   onLogout: () => void;
 }
 
@@ -20,6 +21,7 @@ const STRINGS = {
   khata: { en: "Credit book", ta: "கடன் புத்தகம்" },
   expenses: { en: "Record spending", ta: "செலவு பதிவு" },
   printerSetup: { en: "Printer setup", ta: "பிரிண்டர் அமைப்பு" },
+  recentBills: { en: "Delete a recent bill", ta: "சமீபத்திய பில்லை நீக்கு" },
   logOut: { en: "Log out", ta: "வெளியேறு" },
   logoutTitle: { en: "Log out?", ta: "வெளியேறவா?" },
   logoutMessage: {
@@ -51,6 +53,7 @@ export function Sidebar({
   onOpenKhata,
   onOpenExpenses,
   onOpenPrinterSetup,
+  onOpenRecentBills,
   onLogout,
 }: SidebarProps) {
   const { language, toggleLanguage } = useLanguage();
@@ -108,6 +111,15 @@ export function Sidebar({
           aria-label={STRINGS.printerSetup[language]}
         >
           <PrinterIcon />
+        </button>
+        <button
+          type="button"
+          className="sidebar__icon-btn"
+          onClick={onOpenRecentBills}
+          aria-label={STRINGS.recentBills[language]}
+          title={STRINGS.recentBills[language]}
+        >
+          <DeleteIcon />
         </button>
         <button
           type="button"

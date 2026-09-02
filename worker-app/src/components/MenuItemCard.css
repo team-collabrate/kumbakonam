@@ -48,14 +48,17 @@
   background: var(--color-surface);
 }
 
-.menu-item-card--no-photo .menu-item-card__name,
-.menu-item-card--no-photo .menu-item-card__price {
+.menu-item-card--no-photo .menu-item-card__name {
   color: var(--color-text);
   text-shadow: none;
 }
 
+/* Same orange as the photo variant, minus the dark pill behind it — that
+   was there for contrast over a busy photo, which a plain surface card
+   doesn't have. */
 .menu-item-card--no-photo .menu-item-card__price {
-  color: var(--color-text-muted);
+  background: none;
+  text-shadow: none;
 }
 
 /* Strong, from the bottom — this is what makes white text reliably
@@ -105,21 +108,23 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  /* Room on the right for the qty control sitting in the same corner —
-     sized to the "+" circle (40px + its 8px offset from the edge, plus a
-     little clearance), which is what every card shows until something's
-     actually in the cart. The wider "− N +" stepper (see
-     .menu-item-card__stepper below, ~94px) only appears once an item's
-     already added — by then the shopper knows what they picked, so it's
-     an acceptable trade to let it sit slightly over the price line rather
-     than reserve its full width on every card all the time. Was 76px;
-     56px gives real cards on a narrow tablet back close to 20px of name
-     width per line — see MenuGrid.css for why that number matters here. */
-  padding: var(--space-3) 56px var(--space-3) var(--space-3);
+  /* Symmetric — nothing floats over this corner (name, qty, and price are
+     all real in-flow content now, stacked in that order — see
+     MenuItemCard.tsx), so there's no width to reserve out of the name for
+     any of them. This used to be padded out to 108px on the right for the
+     qty control specifically, which at the real ~140px tablet card left
+     only ~20px for the name — unreadable.
+     Vertical padding trimmed to --space-2 (was --space-3 both axes): three
+     stacked rows — a 2-line name, the qty control, and price all now real
+     content in this block — needs the height a 4/3 card can't spare at
+     this width; the real tablet clipped the name's own first line off the
+     top before this. Horizontal stays --space-3, that axis was never
+     tight. */
+  padding: var(--space-2) var(--space-3);
 }
 
 .menu-item-card__name {
-  font-size: var(--text-body);
+  font-size: var(--text-footnote);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: var(--tracking-body);
@@ -134,31 +139,56 @@
   -webkit-box-orient: vertical;
 }
 
+/* The last row, right-aligned — lands in the card's bottom-right corner
+   visually (the tag look that was asked for) without being pinned there:
+   position:absolute at that literal corner was tried first, but that's
+   exactly where the stepper (qty>0) also reaches, and the two fighting
+   over one spot hid the price under it whenever something was already in
+   the cart. align-self overrides the column's own stretch just for this
+   child, so it hugs the right edge without needing its own positioning
+   context. Small pill background (not just coloured text) because the
+   orange requested is close enough to the photo's own warm midtones on
+   some shots to lose contrast without one — the same reasoning the qty
+   buttons already use their own solid fill for. */
 .menu-item-card__price {
-  font-size: var(--text-title-3);
+  align-self: flex-end;
+  margin-top: 1px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.55);
+  font-size: var(--text-callout);
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: var(--tracking-title);
   font-variant-numeric: tabular-nums;
-  color: #ffffff;
+  color: var(--color-accent);
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+/* Its own line, not floating over the corner or sharing price's line — see
+   MenuItemCard.tsx's comment on this element for why. Left-aligned with
+   everything else above it rather than the old bottom-right placement,
+   which was sized for a much wider card than the real tablet has. */
 .menu-item-card__qty {
-  position: absolute;
-  right: var(--space-2);
-  bottom: var(--space-2);
-  z-index: 2;
+  margin-top: 2px;
 }
 
+/* 40px shrunk to 32px (and the stepper's own buttons 30px to 26px below) —
+   the third stacked row price now needs (see MenuItemCard.tsx) doesn't fit
+   a 2-line name + this + price in a 4/3 card at the real ~140px tablet
+   width otherwise; the name's own first line was clipping off the top of
+   the card before this. Still bigger than the price tag or shortcut badge
+   next to it, just no longer the same size as a comfortable full tap
+   target — a real trade against the alternative, which was an unreadable
+   or cut-off name. */
 .menu-item-card__add {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 2px solid var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 88%, transparent);
   color: var(--color-accent-contrast);
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -180,8 +210,8 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  height: 40px;
-  padding: 0 4px;
+  height: 32px;
+  padding: 0 3px;
   border-radius: 999px;
   background: color-mix(in srgb, #000 55%, transparent);
   backdrop-filter: var(--blur-thin);
@@ -192,13 +222,13 @@
 
 .menu-item-card__step {
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: none;
   background: var(--color-accent);
   color: var(--color-accent-contrast);
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;

@@ -3,6 +3,7 @@ import { formatCurrency, useLanguage, useSession, type Customer } from "@kumbako
 import { getRange, type RangeMode } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
+import { useDailySummariesInRange } from "../hooks/useDailySummariesInRange";
 import { useCustomers } from "../hooks/useCustomers";
 import { bucketByDayOfWeek, bucketByHour, bucketByRecentDay, bucketByWeekOfMonth } from "../utils/chartBuckets";
 import { computeDashboardStats } from "../utils/dashboardStats";
@@ -35,11 +36,16 @@ export function ReportsScreen() {
   const { language } = useLanguage();
   const { sessionUser } = useSession();
   // Defaults to the 3-day window (today/yesterday/day-before) — the same
-  // window pruneOldOrders keeps, and what the owner asked to see first.
+  // window archiveAndPruneOldData keeps, and what the owner asked to see
+  // first.
   const [mode, setMode] = useState<RangeMode>("recent");
   const range = useMemo(() => getRange(mode), [mode]);
   const { orders, loading, error } = useOrdersInRange(range);
   const spend = useExpensesInRange(range);
+  // Only ever nonzero once `range` reaches past the 3-day detail window
+  // (weekly/monthly) — see useDailySummariesInRange's own comment on why
+  // adding this to the live totals below never double-counts a day.
+  const archived = useDailySummariesInRange(range);
   const customers = useCustomers();
   // The worker app has always been able to take a payment (KhataModal) and
   // record spending (ExpenseModal) — the owner app could only watch both
@@ -51,12 +57,31 @@ export function ReportsScreen() {
 
   // Reuses computeDashboardStats purely for its voided-order exclusion —
   // this screen only needs the one number, not the rest of the shape.
-  const totalSales = useMemo(() => computeDashboardStats(orders).totalSales, [orders]);
-  const net = totalSales - spend.totalSpent;
+  // Plus `archived`, for whatever portion of the range has already aged
+  // out of live order/expense detail (see useDailySummariesInRange).
+  const totalSales = useMemo(
+    () => computeDashboardStats(orders).totalSales + archived.totalSales,
+    [orders, archived.totalSales],
+  );
+  const totalSpent = spend.totalSpent + archived.totalSpent;
+  const net = totalSales - totalSpent;
+
+  // Display order only — `orders` itself stays chronological (createdAt
+  // desc, straight off the query) for the chart bucketing and totals above,
+  // which need real time order, not this. Voided bills float to the top of
+  // the *list* so a just-deleted bill doesn't get lost between two live
+  // ones — most-recently-voided first, then the rest in their usual
+  // newest-first order (both groups are already sorted desc going in, so a
+  // filter+concat keeps each group's own recency order intact).
+  const displayOrders = useMemo(() => {
+    const voided = orders.filter((o) => o.status === "voided");
+    const active = orders.filter((o) => o.status !== "voided");
+    return [...voided, ...active];
+  }, [orders]);
 
   // Either subscription failing means the figures below would be wrong
   // rather than merely incomplete, so one error hides the whole report.
-  const failure = error ?? spend.error ?? customers.error;
+  const failure = error ?? spend.error ?? customers.error ?? archived.error;
 
   const chartData = useMemo(() => {
     if (mode === "recent") return bucketByRecentDay(orders, range.start, language);
@@ -82,7 +107,7 @@ export function ReportsScreen() {
             </div>
             <div>
               <dt>{STRINGS.spent[language]}</dt>
-              <dd className="is-spend">−{formatCurrency(spend.totalSpent)}</dd>
+              <dd className="is-spend">−{formatCurrency(totalSpent)}</dd>
             </div>
             <div>
               <dt>{STRINGS.net[language]}</dt>
@@ -102,7 +127,7 @@ export function ReportsScreen() {
             ) : orders.length === 0 ? (
               <p className="reports-screen__status">{STRINGS.empty[language]}</p>
             ) : (
-              orders.map((order) => <OrderHistoryRow key={order.orderId} order={order} />)
+              displayOrders.map((order) => <OrderHistoryRow key={order.orderId} order={order} />)
             )}
           </section>
 

@@ -58,15 +58,78 @@ function storePrinterAddress(address: string): void {
   }
 }
 
-/** Turns Bluetooth on if it's off, requesting the runtime permission first
- *  if Android hasn't granted it yet (BLUETOOTH_CONNECT/SCAN on API 31+,
- *  BLUETOOTH/BLUETOOTH_ADMIN/ACCESS_FINE_LOCATION below it — the plugin's
- *  own manifest declares all of these; see android/app's merged manifest
- *  after a build, not this repo's hand-maintained one). */
-export async function ensureBluetoothEnabled(): Promise<void> {
-  const state = await BluetoothSerial.enable();
-  if (!state.enabled) {
-    throw new Error("Bluetooth is off, or permission to use it was refused.");
+/** Thrown when the plugin's own rejection says Bluetooth is genuinely off
+ *  (its ERROR_DISABLED string, from BluetoothSerialPlugin.java's
+ *  rejectIfDisabled — only reached once permission is already granted, so
+ *  this is never confused with the permission case below). Distinguished
+ *  from a generic connect failure so the UI can tell the worker the one
+ *  thing that actually fixes it (usePrinter.ts matches on this class, not
+ *  the message text). */
+export class BluetoothDisabledError extends Error {
+  constructor() {
+    super("Bluetooth is off.");
+    this.name = "BluetoothDisabledError";
+  }
+}
+
+/** Thrown when Android's own Bluetooth/location permission prompt was
+ *  denied (the plugin's ERROR_PERMISSION_DENIED). Distinct from
+ *  BluetoothDisabledError — turning Bluetooth on doesn't fix this one, only
+ *  granting the app permission does (Settings > Apps > this app >
+ *  Permissions, since a second in-app prompt won't reappear once denied). */
+export class BluetoothPermissionDeniedError extends Error {
+  constructor() {
+    super("Bluetooth/location permission was denied.");
+    this.name = "BluetoothPermissionDeniedError";
+  }
+}
+
+/** Turns the plugin's raw rejection into one of the two errors above when
+ *  recognisable, or passes it through unchanged otherwise. */
+function classifyBluetoothError(err: unknown): Error {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/disabled/i.test(message)) return new BluetoothDisabledError();
+  if (/permission/i.test(message)) return new BluetoothPermissionDeniedError();
+  return err instanceof Error ? err : new Error(message);
+}
+
+/**
+ * Best-effort only — NOT a reliable "is Bluetooth on" check. See the long
+ * comment below for why: on every Android version except 12/12L, calling
+ * this when Bluetooth is already on and permission hasn't been granted yet
+ * reports {enabled:false} without ever asking for that permission, which
+ * would make every future call permanently look like "Bluetooth is off"
+ * even after the worker turns it on by hand. Because of that, this function
+ * never throws — a false/rejected result here means nothing more than "this
+ * particular shortcut didn't apply"; scanForPrinters()/connectClassic()
+ * below still run scan()/connect() regardless, and it's THEIR rejection
+ * message (via classifyBluetoothError) that's actually trustworthy, since
+ * BluetoothSerialPlugin.java's rejectIfDisabled() always requests
+ * permission first, with no such version gate.
+ *
+ * Turns Bluetooth on if it's off, requesting the runtime permission first
+ * if Android hasn't granted it yet (BLUETOOTH_CONNECT/SCAN on API 31+,
+ * BLUETOOTH/BLUETOOTH_ADMIN/ACCESS_FINE_LOCATION below it — the plugin's
+ * own manifest declares all of these; see android/app's merged manifest
+ * after a build, not this repo's hand-maintained one).
+ *
+ * IMPORTANT: the underlying plugin (BluetoothSerialPlugin.java,
+ * getCanEnable()) only ever attempts to flip Bluetooth on itself for API
+ * 31-32 (Android 12/12L) — everywhere else, including Android 13+ and
+ * Android <=11 (both real cases seen on real hardware here), it just
+ * resolves {enabled:false} immediately, WITHOUT requesting permission or
+ * prompting the user at all — even if Bluetooth is already on and the only
+ * thing missing is permission. That's not worth patching around in the
+ * plugin itself: since API 33, Android requires an explicit system dialog
+ * (ACTION_REQUEST_ENABLE) to turn Bluetooth on, which this plugin doesn't
+ * implement either way.
+ */
+async function tryEnableBluetooth(): Promise<void> {
+  try {
+    await BluetoothSerial.enable();
+  } catch {
+    // Ignored — see this function's own comment. The real signal comes from
+    // scan()/connect()'s own rejection, not from this best-effort attempt.
   }
 }
 
@@ -77,12 +140,16 @@ export async function ensureBluetoothEnabled(): Promise<void> {
  *  filtering, and this list is short enough on a real device that
  *  filtering isn't worth the risk of hiding the one that matters. */
 export async function scanForPrinters(): Promise<ClassicPrinterConnection[]> {
-  await ensureBluetoothEnabled();
-  const result = await BluetoothSerial.scan();
-  return result.devices.map((d: ScannedDevice) => ({
-    address: d.address,
-    name: d.name || d.address,
-  }));
+  await tryEnableBluetooth();
+  try {
+    const result = await BluetoothSerial.scan();
+    return result.devices.map((d: ScannedDevice) => ({
+      address: d.address,
+      name: d.name || d.address,
+    }));
+  } catch (err) {
+    throw classifyBluetoothError(err);
+  }
 }
 
 /** Secure RFCOMM first, insecure as the fallback — matches the old app's
@@ -97,12 +164,16 @@ async function connectWithFallback(address: string): Promise<void> {
     await BluetoothSerial.connect({ address });
   } catch (err) {
     console.warn(`Secure RFCOMM connect failed for ${address}, trying insecure`, err);
-    await BluetoothSerial.connectInsecure({ address });
+    try {
+      await BluetoothSerial.connectInsecure({ address });
+    } catch (insecureErr) {
+      throw classifyBluetoothError(insecureErr);
+    }
   }
 }
 
 export async function connectClassic(address: string): Promise<ClassicPrinterConnection> {
-  await ensureBluetoothEnabled();
+  await tryEnableBluetooth();
   await connectWithFallback(address);
   storePrinterAddress(address);
   return { address, name: address };
@@ -118,7 +189,7 @@ export async function getStoredPrinterConnection(): Promise<ClassicPrinterConnec
   const address = getStoredPrinterAddress();
   if (!address) return null;
   try {
-    await ensureBluetoothEnabled();
+    await tryEnableBluetooth();
     const already = await BluetoothSerial.isConnected({ address });
     if (!already.connected) {
       await connectWithFallback(address);

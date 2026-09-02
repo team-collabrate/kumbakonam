@@ -7,6 +7,9 @@
  * regardless of the language the worker happens to have the app set to.
  */
 export const CAFE_DETAILS = {
+  /** Very top line of the bill, above the logo — a devotional opening line,
+   *  not part of the shop's own identity block below it. Leave empty to omit. */
+  invocation: "சாமியே சரணம் !!",
   /** Shop name, printed largest. */
   name: "கும்பகோணம் கஃபே",
   /** One-line descriptor under the name — cuisine and location. */
@@ -25,12 +28,11 @@ export const CAFE_DETAILS = {
  * centred at the top; if the file is missing the receipt renders without it
  * rather than failing.
  *
- * Currently off (removed from the bill by request) — the shop name/subtitle
- * text above still identifies the till, this just drops the image. Nothing
- * else on the receipt depends on it: the layout measures its own height, so
- * turning this back on doesn't need any other change.
+ * Re-enabled 2026-09-01 with a fresh mark (repo root logo-b-w.png, prepared
+ * small by request — see LOGO_MAX_W/LOGO_MAX_H in receiptCanvas.ts, both
+ * sized to this exact file so the canvas never has to resample it again).
  *
  * Thermal printing is 1-bit: a black-on-white line-art mark reproduces well,
  * photographs and grey gradients turn to mud.
  */
-export const RECEIPT_LOGO_URL: string | null = null;
+export const RECEIPT_LOGO_URL: string | null = "/receipt-logo.png";

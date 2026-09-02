@@ -4,6 +4,7 @@ import {
   doc,
   getDocs,
   increment,
+  limit,
   onSnapshot,
   orderBy,
   query,
@@ -12,7 +13,6 @@ import {
   setDoc,
   updateDoc,
   where,
-  writeBatch,
   type DocumentReference,
   type FirestoreError,
   type Unsubscribe,
@@ -158,6 +158,40 @@ export function subscribeToOrdersInRange(
 }
 
 /**
+ * Live view of the most recently billed orders, across any worker on this
+ * device — backs the Worker app's "delete recent bill" panel (firestore.rules
+ * lets a worker void their own just-billed order within 30 minutes, so a
+ * mis-billed sale can be undone without waiting for the owner). Fetches more
+ * than `count` and filters voided orders out client-side rather than adding
+ * a `where("status", "!=", "voided")` — that would need a composite index
+ * (an inequality filter combined with the createdAt orderBy) for what's a
+ * small, rarely-reordered collection at this cafe's order volume; filtering
+ * a few extra already-fetched docs is cheaper than maintaining one.
+ */
+export function subscribeToRecentOrders(
+  count: number,
+  onChange: (orders: Order[]) => void,
+  onError?: (error: FirestoreError) => void,
+): Unsubscribe {
+  const db = getFirestoreDb();
+  // Padding for the voided orders filtered out below — generous enough that
+  // a burst of voids in a row still leaves `count` live orders on screen.
+  const fetchLimit = count * 4;
+  const q = query(collection(db, COLLECTION), orderBy("createdAt", "desc"), limit(fetchLimit));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const orders = snap.docs
+        .map((d) => ({ orderId: d.id, ...(d.data() as Omit<Order, "orderId">) }))
+        .filter((o) => o.status !== "voided")
+        .slice(0, count);
+      onChange(orders);
+    },
+    onError,
+  );
+}
+
+/**
  * Owner-only correction path (e.g. fixing a mis-entered discount) — see
  * Data Model §7. Not currently called from either app's UI (no screen
  * offers it yet). Left in place for that future feature, but note it will
@@ -223,39 +257,11 @@ export async function voidOrder(orderId: string, voidedBy: string): Promise<void
   });
 }
 
-/**
- * Permanently deletes every order older than `olderThanDays` — a deliberate
- * product decision (owner requested only the last 3 days stay searchable,
- * older ones purged automatically), not the original design: orders used
- * to be delete-never (see the old comment on the `orders` delete rule in
- * firestore.rules, and voidOrder above, which cancels a sale by marking it
- * rather than removing it, specifically to keep the bill-number sequence
- * and audit trail intact). That trade-off is now explicit and accepted —
- * a sale older than the window is gone for good, with no way to look it up
- * again for a customer query or a tax question.
- *
- * Called from the Owner app once per load (see OwnerHome.tsx) rather than
- * running as a true server-side schedule — this stack has no Cloud
- * Functions (see firestore.rules' own note on why: custom infra needs
- * Blaze billing, flagged rather than added unprompted), so "automatic"
- * here means "whenever the app is next opened", not "even if nobody opens
- * it for a week". A real Firestore TTL policy on `createdAt` would close
- * that gap without any code — a one-time, free, no-Blaze setup in the
- * Firebase console (Firestore → TTL policies) if that's ever worth doing.
- *
- * firestore.rules' delete rule enforces the same 3-day floor server-side,
- * independent of this function — a compromised or buggy client can prune
- * old orders early, never a recent one.
- */
-export async function pruneOldOrders(olderThanDays: number): Promise<number> {
-  const db = getFirestoreDb();
-  const cutoff = Timestamp.fromMillis(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
-  const snap = await getDocs(query(collection(db, COLLECTION), where("createdAt", "<", cutoff)));
-  const docs = snap.docs;
-  for (let i = 0; i < docs.length; i += 400) {
-    const batch = writeBatch(db);
-    for (const d of docs.slice(i, i + 400)) batch.delete(d.ref);
-    await batch.commit();
-  }
-  return docs.length;
-}
+// pruneOldOrders (permanently deleted anything past the 3-day window, orders
+// only, no trace kept) lived here until 2026-09-01 — superseded by
+// archiveAndPruneOldData in dailySummary.service.ts, which saves each
+// affected day's totalSales/totalSpent/orderCount to `dailySummaries`
+// before deleting, and covers `expenses` too (this old function never
+// pruned those at all, so they accumulated forever). Same 3-day product
+// decision and the same firestore.rules floor still apply — only how the
+// history is kept changed, not the retention window itself.

@@ -43,19 +43,38 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// Requested 2026-08-31. Categories per the owner's own call: Idiyappam 1
-// under Breakfast (next to the existing Idiyappam 1 Set); Kali, Mochai and
-// Paasi Payiru under Vadai (the "snacks" tab); the parcel drinks under Tea.
+// 2026-09-01, second batch (already added — kept for history, not re-run):
+// all parcel sizes. "1 + 1/2 Parcel" is a bundle of one full + one half
+// parcel sold together at one price (Horlicks/Boost/Tea/Naatu Sakarai Tea);
+// Sukku Coffee instead got two separate sizes, matching the existing
+// Black Tea 1 Parcel / Black Tea 1/2 Parcel pattern rather than a bundle.
+//   { name: "Horlicks 1 + 1/2 Parcel", nameTa: "ஹார்லிக்ஸ் 1 + 1/2 பார்சல்", price: 85, category: "Tea" },
+//   { name: "Boost 1 + 1/2 Parcel", nameTa: "பூஸ்ட் 1 + 1/2 பார்சல்", price: 85, category: "Tea" },
+//   { name: "Tea 1 + 1/2 Parcel", nameTa: "தேநீர் 1 + 1/2 பார்சல்", price: 75, category: "Tea" },
+//   { name: "Naatu Sakarai Tea 1 + 1/2 Parcel", nameTa: "நாட்டு சர்க்கரை 1 + 1/2 பார்சல் டீ", price: 90, category: "Tea" },
+//   { name: "Sukku Coffee 1 Parcel", nameTa: "சுக்கு காபி 1 பார்சல்", price: 40, category: "Tea" },
+//   { name: "Sukku Coffee 1/2 Parcel", nameTa: "சுக்கு காபி 1/2 பார்சல்", price: 35, category: "Tea" },
+
+// 2026-09-01, third batch (already added — kept for history, not re-run):
+//   { name: "Cauliflower", nameTa: "காலிஃபிளவர்", price: 40, category: "Vadai" },
+//   { name: "Kaalan (Mushroom)", nameTa: "காளான்", price: 60, category: "Vadai" },
+//   { name: "Kepai Rotti", nameTa: "கேபை ரொட்டி", price: 10, category: "Vadai" },
+
+// 2026-09-01, fourth batch (already added — kept for history, not re-run):
+//   { name: "Meals Oru Padi", nameTa: "மீல்ஸ் ஒரு படி", price: 1500, category: "Lunch" },
+//   { name: "Briyani Oru Padi", nameTa: "பிரியாணி ஒரு படி", price: 1800, category: "Lunch" },
+
+// Requested 2026-09-01, fifth batch — parcel sizes for Naatu Sakarai
+// Coffee, matching the Naatu Sakarai Tea 1 Parcel / 1/2 Parcel naming
+// already on the menu. The plain glass "Naatu Sakarai Coffee" (₹22) stays.
 const items = [
-  { name: "Idiyappam 1", nameTa: "இடியாப்பம் (1)", price: 15, category: "Breakfast" },
-  { name: "Kali", nameTa: "களி", price: 20, category: "Vadai" },
-  { name: "Mochai", nameTa: "மொச்சை", price: 20, category: "Vadai" },
-  { name: "Paasi Payiru", nameTa: "பாசிப்பயறு", price: 20, category: "Vadai" },
-  { name: "Milk 1/2 Parcel", nameTa: "பால் 1/2 பார்சல்", price: 35, category: "Tea" },
-  { name: "Naatu Sakarai 1 Parcel", nameTa: "நாட்டு சர்க்கரை 1 பார்சல்", price: 45, category: "Tea" },
-  { name: "Naatu Sakarai 1/2 Parcel", nameTa: "நாட்டு சர்க்கரை 1/2 பார்சல்", price: 40, category: "Tea" },
-  { name: "Black Tea 1 Parcel", nameTa: "கருப்பு தேநீர் 1 பார்சல்", price: 30, category: "Tea" },
-  { name: "Black Tea 1/2 Parcel", nameTa: "கருப்பு தேநீர் 1/2 பார்சல்", price: 25, category: "Tea" },
+  { name: "Naatu Sakarai Coffee 1 Parcel", nameTa: "நாட்டு சர்க்கரை 1 பார்சல் காபி", price: 50, category: "Tea" },
+  {
+    name: "Naatu Sakarai Coffee 1/2 Parcel",
+    nameTa: "நாட்டு சர்க்கரை 1/2 பார்சல் காபி",
+    price: 45,
+    category: "Tea",
+  },
 ];
 
 async function run() {

@@ -105,6 +105,82 @@ const MENU_ITEM_IMAGE: Record<string, string> = {
   "Paasi Payiru": "/items/paasi-payiru.png",
 };
 
+/**
+ * Auto-assigns a photo by name for anything not in MENU_ITEM_IMAGE above —
+ * every item added since the shift picker / parcel-combo / bulk-order
+ * requests (SPL Dosa, the Naatu Sakarai parcels, Horlicks/Boost/Tea combos,
+ * Meals Oru Padi, ...) went in through add-menu-items.mjs with no photo at
+ * all, and needed a manual MENU_ITEM_IMAGE entry to ever get one. This
+ * closes that gap going forward: a name containing "dosa", "tea", "coffee"
+ * etc. gets a reasonable existing photo automatically, no code change
+ * needed when the owner adds a new size/variant of something already shot.
+ *
+ * Deliberately ordered, checked top-to-bottom, first match wins — most
+ * specific phrase before the generic word it contains (e.g. "sukku coffee"
+ * before "coffee", "kothu parotta" before "parotta"), the same reasoning
+ * MENU_ITEM_IMAGE's own exact matches already rely on, just one level
+ * fuzzier. Never overrides an exact match above; only fills the gap when
+ * there isn't one, so a name this guesses wrong for is one MENU_ITEM_IMAGE
+ * entry away from being fixed for good, same as it always was.
+ */
+const IMAGE_KEYWORDS: [pattern: string, image: string][] = [
+  ["onion podi dosa", "/items/onion-podi-dosa.png"],
+  ["podi dosa", "/items/podi-dosa.png"],
+  ["onion dosa", "/items/onion-dosa.png"],
+  ["uthappam", "/items/onion-dosa.png"],
+  ["masala dosa", "/items/masala-dosa.png"],
+  ["ghee roast", "/items/masala-dosa.png"],
+  ["kal dosa", "/items/kal-dosa.png"],
+  ["dosa", "/items/kal-dosa.png"], // generic — plain/SPL/new dosa variants
+  ["idiyappam", "/items/idiyappam.png"],
+  ["idli", "/items/idly.png"],
+  ["poori", "/items/poori.png"],
+  ["chapathi", "/items/chappathi.png"],
+  ["chapati", "/items/chappathi.png"],
+  ["kothu parotta", "/items/kothu-porotta.png"],
+  ["kothu porotta", "/items/kothu-porotta.png"],
+  ["chilli parotta", "/items/chilli-porotta.png"],
+  ["chilli porotta", "/items/chilli-porotta.png"],
+  ["parotta", "/items/poratta.png"],
+  ["porotta", "/items/poratta.png"],
+  ["rotti", "/items/poratta.png"], // closest shot to a plain roti/flatbread
+  ["roti", "/items/poratta.png"],
+  ["pongal", "/items/pongal.png"],
+  ["briyani", "/items/veg-briyani.png"],
+  ["biryani", "/items/veg-briyani.png"],
+  ["tomato rice", "/items/tomato-rice.png"],
+  ["lemon rice", "/items/lemon-rice.png"],
+  ["curd rice", "/items/curd-rice.png"],
+  ["sambar rice", "/items/sambar-rice.png"],
+  ["meals", "/items/meals.png"],
+  ["rice", "/items/rice.png"], // generic — any variety with no shot of its own
+  ["noodles", "/items/noodles.png"],
+  ["vadai", "/items/vada.png"],
+  ["vada", "/items/vada.png"],
+  ["samosa", "/items/samosa.png"],
+  ["bonda", "/items/bonda.png"],
+  ["kesari", "/items/kesari.png"],
+  ["poli", "/items/boli.png"],
+  ["paniyaram", "/items/paniyaram.png"],
+  ["kali", "/items/kali.png"],
+  ["mochai", "/items/mochai.png"],
+  ["paasi payiru", "/items/paasi-payiru.png"],
+  ["sukku coffee", "/items/sukku-coffee.png"],
+  ["coffee", "/items/coffee.png"],
+  ["lemon tea", "/items/lemon-tea.png"],
+  ["badam milk", "/items/badam-milk.png"],
+  ["horlicks", "/items/milk.png"],
+  ["milk", "/items/milk.png"],
+  ["tea", "/items/tea.png"], // generic — plain/black/Naatu Sakarai/parcel, any size
+  ["boost", "/items/boost.png"],
+  ["water", "/items/water-bottle.png"],
+];
+
+function guessImage(name: string): string | undefined {
+  const lower = name.toLowerCase();
+  return IMAGE_KEYWORDS.find(([pattern]) => lower.includes(pattern))?.[1];
+}
+
 export interface MenuItemCardProps {
   item: MenuItem;
   /** Keyboard digit that adds this item — shown as a small badge, undefined past the 10th visible item. */
@@ -125,7 +201,7 @@ const STRINGS = {
 export function MenuItemCard({ item, shortcutKey, qty, onAdd, onIncrement, onDecrement }: MenuItemCardProps) {
   const { language } = useLanguage();
   const displayName = translateItemName(item, language);
-  const image = MENU_ITEM_IMAGE[item.name];
+  const image = MENU_ITEM_IMAGE[item.name] ?? guessImage(item.name);
 
   // The whole card still adds on tap, exactly as before — the qty stepper is
   // an additional fine control, not a replacement for that. Its own buttons
@@ -182,49 +258,64 @@ export function MenuItemCard({ item, shortcutKey, qty, onAdd, onIncrement, onDec
 
       <div className="menu-item-card__info">
         <span className="menu-item-card__name">{displayName}</span>
-        <span className="menu-item-card__price">{formatCurrency(item.price)}</span>
-      </div>
 
-      <div className="menu-item-card__qty" onClick={stop}>
-        {qty === 0 ? (
-          <button
-            type="button"
-            className="menu-item-card__add"
-            onClick={(e) => {
-              stop(e);
-              onAdd(item);
-            }}
-            aria-label={`${STRINGS.add[language]} ${displayName}`}
-          >
-            +
-          </button>
-        ) : (
-          <div className="menu-item-card__stepper">
+        {/* Its own line below the name — the stepper (qty>0) is ~94px wide
+            on its own, more than half of the real ~140px tablet card, so
+            sharing a row with anything else left one of them squeezed
+            unreadable (see git history). Its own full-width line is the
+            one arrangement where nothing has to compete with it. */}
+        <div className="menu-item-card__qty" onClick={stop}>
+          {qty === 0 ? (
             <button
               type="button"
-              className="menu-item-card__step"
+              className="menu-item-card__add"
               onClick={(e) => {
                 stop(e);
-                onDecrement(item.itemId);
+                onAdd(item);
               }}
-              aria-label={STRINGS.decrease[language]}
-            >
-              −
-            </button>
-            <span className="menu-item-card__qty-value">{qty}</span>
-            <button
-              type="button"
-              className="menu-item-card__step"
-              onClick={(e) => {
-                stop(e);
-                onIncrement(item.itemId);
-              }}
-              aria-label={STRINGS.increase[language]}
+              aria-label={`${STRINGS.add[language]} ${displayName}`}
             >
               +
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="menu-item-card__stepper">
+              <button
+                type="button"
+                className="menu-item-card__step"
+                onClick={(e) => {
+                  stop(e);
+                  onDecrement(item.itemId);
+                }}
+                aria-label={STRINGS.decrease[language]}
+              >
+                −
+              </button>
+              <span className="menu-item-card__qty-value">{qty}</span>
+              <button
+                type="button"
+                className="menu-item-card__step"
+                onClick={(e) => {
+                  stop(e);
+                  onIncrement(item.itemId);
+                }}
+                aria-label={STRINGS.increase[language]}
+              >
+                +
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Below the qty row, right-aligned — a real flow row, not pinned
+            to the card's own bottom-right corner: that was tried first
+            (matching the request literally), but the corner is exactly
+            where the stepper (qty>0) also reaches, and pinning both there
+            hid the price under it every time something was already in the
+            cart — verified at the real ~140px tablet card width. Stacking
+            it after the qty row instead lands in the same visual corner
+            whenever there's room, without ever fighting the stepper for
+            it. */}
+        <span className="menu-item-card__price">{formatCurrency(item.price)}</span>
       </div>
     </div>
   );

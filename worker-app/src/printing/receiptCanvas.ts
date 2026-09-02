@@ -10,6 +10,7 @@
  * the customer is handed cannot drift apart.
  */
 import { CAFE_DETAILS, RECEIPT_LOGO_URL } from "./cafeDetails";
+import { buildRasterReceipt } from "./escposRaster";
 import type { BillInput } from "./receipt";
 
 /** 80mm paper at 203 dpi: 576 printable dots. The printer rejects wider rasters. */
@@ -34,10 +35,13 @@ const font = (size: number, weight: "normal" | "bold" = "normal") =>
  *  ceiling for a taller mark, not a target.
  *
  *  Every dot of logo height costs 72 bytes over the air and a dot of paper,
- *  so this is a print-speed setting as much as a design one. Regenerate the
- *  PNG at the same width after changing it. */
-const LOGO_MAX_W = 320;
-const LOGO_MAX_H = 180;
+ *  so this is a print-speed setting as much as a design one. Kept small by
+ *  request (2026-09-01) — 104x91 is exactly what
+ *  `node scripts/prepare-receipt-logo.mjs logo-b-w.png 104` produces from
+ *  the current mark; regenerate at a new width after changing either of
+ *  these, and update both together so they still match the file. */
+const LOGO_MAX_W = 104;
+const LOGO_MAX_H = 91;
 
 /** Size of the அளவு / விலை / தொகை label row. Smaller than the figures it
  *  labels: the Tamil words are much wider than the numbers, so every point
@@ -168,6 +172,32 @@ function formatTime(date: Date): string {
   return `${pad2(h)}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())} ${period}`;
 }
 
+export interface ReceiptRasterTiming {
+  /** document.fonts.ready + logo fetch + the two paint() passes. */
+  renderMs: number;
+  /** packRaster's per-pixel scan + assembling the ESC/POS command stream. */
+  rasterMs: number;
+}
+
+/** Canvas render + ESC/POS encode in one call, timed — the two steps every
+ *  print (and print retry) needs back to back, instrumented once here
+ *  rather than at each call site so the numbers can't drift apart from what
+ *  actually ran. See usePrinter.ts's print() for where these join the
+ *  Bluetooth write time into one [PRINT START]..[COMPLETE] log. */
+export async function prepareReceiptRaster(
+  bill: BillInput,
+): Promise<{ bytes: Uint8Array; timing: ReceiptRasterTiming }> {
+  const renderStart = performance.now();
+  const canvas = await renderReceiptCanvas(bill);
+  const renderMs = performance.now() - renderStart;
+
+  const rasterStart = performance.now();
+  const bytes = buildRasterReceipt(canvas);
+  const rasterMs = performance.now() - rasterStart;
+
+  return { bytes, timing: { renderMs, rasterMs } };
+}
+
 export async function renderReceiptCanvas(bill: BillInput): Promise<HTMLCanvasElement> {
   // Tamil glyphs measure as tofu until the face is actually loaded, which
   // would throw off every wrap and right-alignment on the receipt.
@@ -211,6 +241,19 @@ function paint(
   const col = deriveColumns(ctx);
 
   let y = PAD;
+
+  // --- Invocation -----------------------------------------------------------
+  // The one line above the shop's own identity block — a devotional opener,
+  // not part of "who this till belongs to", so it gets its own gap below
+  // rather than reading as an extra line of the shop name.
+  if (CAFE_DETAILS.invocation) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.font = font(24, "bold");
+    y += 24;
+    draw(() => ctx.fillText(CAFE_DETAILS.invocation, CENTER, y));
+    y += 14;
+  }
 
   // --- Logo ---------------------------------------------------------------
   if (logo && logo.width > 0) {

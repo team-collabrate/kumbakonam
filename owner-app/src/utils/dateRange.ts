@@ -1,3 +1,5 @@
+import { businessDayStart } from "@kumbakonam/shared";
+
 export type RangeMode = "recent" | "daily" | "weekly" | "monthly";
 
 export interface DateRange {
@@ -9,6 +11,12 @@ export interface DateRange {
  * Fixed periods per TDD §7 ("today / this week / this month"), not a rolling
  * trend window.
  *
+ * Every boundary here is a business-day start (3am, see businessDayStart in
+ * shared/src/utils/businessDay.ts), not calendar midnight — a sale at 1am
+ * is still last night's trading, not the start of a new "day" mid-shift.
+ * Requested 2026-09-01 after midnight boundaries were splitting one
+ * night's business across two days in Reports.
+ *
  * `end` is the START of the *next* day/week/month, not "now" — the Owner
  * dashboard subscribes to this range with `onSnapshot` (TDD §7), and a
  * Firestore range query's bounds are fixed at query time. If `end` were
@@ -18,29 +26,44 @@ export interface DateRange {
  * rest of the period.
  */
 export function getRange(mode: RangeMode, now: Date = new Date()): DateRange {
+  // The business day `now` currently falls in — every mode below is built
+  // from this one anchor, so "today" never disagrees with itself between
+  // the daily/recent/weekly/monthly views (e.g. 1am is still "yesterday"
+  // everywhere, not just in some of them).
+  const today = businessDayStart(now);
+
   if (mode === "recent") {
-    // Today, yesterday, the day before — matches the window pruneOldOrders
-    // keeps (see orders.service.ts): anything this range could show still
-    // exists, and nothing older does.
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 2);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    // Today, yesterday, the day before — matches the window
+    // archiveAndPruneOldData keeps (see dailySummary.service.ts): anything
+    // this range could show still exists as real order detail, and
+    // nothing older does (older totals come from dailySummaries instead).
+    const start = new Date(today);
+    start.setDate(start.getDate() - 2);
+    const end = new Date(today);
+    end.setDate(end.getDate() + 1);
     return { start, end };
   }
 
   if (mode === "daily") {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    return { start, end };
+    const end = new Date(today);
+    end.setDate(end.getDate() + 1);
+    return { start: today, end };
   }
 
   if (mode === "weekly") {
-    const dayIndex = (now.getDay() + 6) % 7; // days since Monday (0 = Monday)
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayIndex);
-    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+    const dayIndex = (today.getDay() + 6) % 7; // days since Monday (0 = Monday)
+    const start = new Date(today);
+    start.setDate(start.getDate() - dayIndex);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 7);
     return { start, end };
   }
 
-  const start = new Date(now.getFullYear(), now.getMonth(), 1);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  // monthly — the 1st of the business month `today` falls in, 3am, through
+  // the 1st of the next. Deliberately keyed off `today` (not `now.getMonth()`
+  // directly): a sale at 1am on the 1st still belongs to the previous
+  // month's business, same as it belongs to the previous day's.
+  const start = new Date(today.getFullYear(), today.getMonth(), 1, 3, 0, 0, 0);
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 1, 3, 0, 0, 0);
   return { start, end };
 }
