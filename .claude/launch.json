@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "-w", "owner-app"],
       "port": 5174
+    },
+    {
+      "name": "reports-app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "-w", "reports-app"],
+      "port": 5175
     }
   ]
 }

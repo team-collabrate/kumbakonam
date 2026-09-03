@@ -21,6 +21,28 @@
   transform: scale(0.99);
 }
 
+/* One consistent tint for every method — see PaymentIcon's own comment on
+   why this doesn't also vary by colour (WorkerDot, right next to it,
+   already owns colour on this row for a different fact). 36px: matches
+   WorkerDot + text-line height, not sized to the 44px tap-target minimum,
+   since it isn't its own tap target — the whole row is. */
+.order-row__icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+
+.order-row__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
 .order-row__summary-left {
   flex: 1;
   min-width: 0;
@@ -133,8 +155,13 @@
    happened". Struck-through total makes that legible at a glance, without
    needing to expand the row to find out why a number looks off. */
 .order-row.is-voided .order-row__time,
-.order-row.is-voided .order-row__total {
+.order-row.is-voided .order-row__total,
+.order-row.is-voided .order-row__icon {
   color: var(--color-text-muted);
+}
+
+.order-row.is-voided .order-row__icon {
+  background: var(--color-bg);
 }
 
 .order-row.is-voided .order-row__total {

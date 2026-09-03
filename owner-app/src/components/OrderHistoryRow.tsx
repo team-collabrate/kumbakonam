@@ -10,6 +10,7 @@ import {
   type Order,
 } from "@kumbakonam/shared";
 import { WorkerDot } from "./WorkerDot";
+import { PaymentIcon } from "./PaymentIcon";
 import "./OrderHistoryRow.css";
 
 /** Exhaustive over PaymentMethod on purpose: "card" is no longer offered at
@@ -79,6 +80,13 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
   return (
     <div className={`order-row ${isVoided ? "is-voided" : ""}`}>
       <button type="button" className="order-row__summary" onClick={() => setExpanded((v) => !v)} aria-expanded={expanded}>
+        {/* Icon avatar, one per row — the "real transaction list" look this
+            was missing (every row previously started straight at the time
+            text). Distinguishes payment method by icon shape; WorkerDot
+            keeps colour to itself, see PaymentIcon's own comment on why. */}
+        <span className={`order-row__icon order-row__icon--${order.paymentMethod}`} aria-hidden="true">
+          <PaymentIcon method={order.paymentMethod} />
+        </span>
         <div className="order-row__summary-left">
           <span className="order-row__time-line">
             <WorkerDot name={order.billedByName} />

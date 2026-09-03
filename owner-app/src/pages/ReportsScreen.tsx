@@ -1,59 +1,64 @@
 import { useMemo, useState } from "react";
-import { formatCurrency, useLanguage, useSession, type Customer } from "@kumbakonam/shared";
+import { formatCurrency, useLanguage, useSession } from "@kumbakonam/shared";
 import { getRange, type RangeMode } from "../utils/dateRange";
 import { useOrdersInRange } from "../hooks/useOrdersInRange";
 import { useExpensesInRange } from "../hooks/useExpensesInRange";
 import { useDailySummariesInRange } from "../hooks/useDailySummariesInRange";
 import { useCustomers } from "../hooks/useCustomers";
+import { groupOrdersByDay } from "../utils/groupOrdersByDay";
 import { bucketByDayOfWeek, bucketByHour, bucketByRecentDay, bucketByWeekOfMonth } from "../utils/chartBuckets";
 import { computeDashboardStats } from "../utils/dashboardStats";
 import { RangeSegmentedControl } from "../components/RangeSegmentedControl";
 import { SalesChart } from "../components/SalesChart";
 import { OrderHistoryRow } from "../components/OrderHistoryRow";
 import { WorkerLegend } from "../components/WorkerLegend";
-import { ExpenseHistoryRow } from "../components/ExpenseHistoryRow";
-import { RecordPaymentModal } from "../components/RecordPaymentModal";
+import { OwedCustomersModal } from "../components/OwedCustomersModal";
+import { TodaySpendingModal } from "../components/TodaySpendingModal";
 import { RecordExpenseModal } from "../components/RecordExpenseModal";
+// Reusing the Dashboard's own compact "stat card that opens a pop-up" look
+// (.owed-card, .dashboard-screen__pair) rather than a second copy of the
+// same styles — Outstanding Credit and Spending get the identical pattern
+// here, by request, so both screens read as one system.
+import "./DashboardScreen.css";
 import "./ReportsScreen.css";
 
 const STRINGS = {
   title: { en: "Reports", ta: "அறிக்கைகள்" },
   orderHistory: { en: "Order History", ta: "ஆர்டர் வரலாறு" },
   spending: { en: "Spending", ta: "செலவுகள்" },
-  addExpense: { en: "+ Add", ta: "+ சேர்" },
-  onCredit: { en: "Outstanding Credit", ta: "நிலுவை கடன்" },
-  nobodyOwes: { en: "Nobody owes anything.", ta: "யாருக்கும் கடன் இல்லை." },
-  collect: { en: "Collect", ta: "பணம் பெறு" },
+  spendingCaption: { en: "What on", ta: "எதற்கு" },
+  onCredit: { en: "Credit", ta: "நிலுவை கடன்" },
+  owedCaption: { en: "Who owes", ta: "யார்" },
   sales: { en: "Sales", ta: "விற்பனை" },
   spent: { en: "Spent", ta: "செலவு" },
   net: { en: "Net", ta: "நிகர" },
   loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
   empty: { en: "No orders in this period.", ta: "இந்தக் காலத்தில் ஆர்டர்கள் இல்லை." },
-  emptySpending: { en: "Nothing recorded in this period.", ta: "இந்தக் காலத்தில் பதிவு இல்லை." },
 };
 
 export function ReportsScreen() {
   const { language } = useLanguage();
   const { sessionUser } = useSession();
-  // Defaults to the 3-day window (today/yesterday/day-before) — the same
-  // window archiveAndPruneOldData keeps, and what the owner asked to see
-  // first.
+  // Defaults to the 2-day window (today/yesterday) — the same window
+  // archiveAndPruneOldData keeps, and what the owner asked to see first.
   const [mode, setMode] = useState<RangeMode>("recent");
   const range = useMemo(() => getRange(mode), [mode]);
   const { orders, loading, error } = useOrdersInRange(range);
   const spend = useExpensesInRange(range);
-  // Only ever nonzero once `range` reaches past the 3-day detail window
+  // Only ever nonzero once `range` reaches past the 2-day detail window
   // (weekly/monthly) — see useDailySummariesInRange's own comment on why
   // adding this to the live totals below never double-counts a day.
   const archived = useDailySummariesInRange(range);
   const customers = useCustomers();
-  // The worker app has always been able to take a payment (KhataModal) and
-  // record spending (ExpenseModal) — the owner app could only watch both
-  // happen from the dashboard, with no equivalent action of its own. Both
-  // service calls already accept the owner role at the Firestore rules
-  // layer; this was a missing screen, not a missing permission.
-  const [collectingFrom, setCollectingFrom] = useState<Customer | null>(null);
   const [addingExpense, setAddingExpense] = useState(false);
+
+  // Both now pop-ups (OwedCustomersModal, TodaySpendingModal) instead of
+  // inline sections the owner had to scroll past all of order history to
+  // reach — the actual complaint this reorganization was for. Both own
+  // their own Collect/Delete flows internally; ReportsScreen just opens
+  // and closes them.
+  const [owedOpen, setOwedOpen] = useState(false);
+  const [spendingOpen, setSpendingOpen] = useState(false);
 
   // Reuses computeDashboardStats purely for its voided-order exclusion —
   // this screen only needs the one number, not the rest of the shape.
@@ -66,18 +71,21 @@ export function ReportsScreen() {
   const totalSpent = spend.totalSpent + archived.totalSpent;
   const net = totalSales - totalSpent;
 
-  // Display order only — `orders` itself stays chronological (createdAt
-  // desc, straight off the query) for the chart bucketing and totals above,
-  // which need real time order, not this. Voided bills float to the top of
-  // the *list* so a just-deleted bill doesn't get lost between two live
-  // ones — most-recently-voided first, then the rest in their usual
-  // newest-first order (both groups are already sorted desc going in, so a
-  // filter+concat keeps each group's own recency order intact).
+  // `orders` itself stays chronological (createdAt desc, straight off the
+  // query) for the chart bucketing and totals above, which need real time
+  // order, not this. Voided bills float to the top of each *day's own
+  // group* below (see groupOrdersByDay's comment on why that still works
+  // after grouping) so a just-voided bill doesn't get lost among a busy
+  // day's other orders — most-recently-voided first, then the rest in
+  // their usual newest-first order (both groups are already sorted desc
+  // going in, so a filter+concat keeps each group's own recency intact).
   const displayOrders = useMemo(() => {
     const voided = orders.filter((o) => o.status === "voided");
     const active = orders.filter((o) => o.status !== "voided");
     return [...voided, ...active];
   }, [orders]);
+
+  const dayGroups = useMemo(() => groupOrdersByDay(displayOrders, language), [displayOrders, language]);
 
   // Either subscription failing means the figures below would be wrong
   // rather than merely incomplete, so one error hides the whole report.
@@ -99,21 +107,52 @@ export function ReportsScreen() {
         <p className="reports-screen__error">{failure}</p>
       ) : (
         <>
-          {/* What the period came to, before the detail below explains it. */}
-          <dl className="reports-screen__summary">
-            <div>
-              <dt>{STRINGS.sales[language]}</dt>
-              <dd>{formatCurrency(totalSales)}</dd>
-            </div>
-            <div>
-              <dt>{STRINGS.spent[language]}</dt>
-              <dd className="is-spend">−{formatCurrency(totalSpent)}</dd>
-            </div>
-            <div>
-              <dt>{STRINGS.net[language]}</dt>
-              <dd className={net < 0 ? "is-negative" : "is-net"}>{formatCurrency(net)}</dd>
-            </div>
-          </dl>
+          {/* Sales as the hero figure, Spent/Net a secondary split below it
+              — the same .today-card treatment Dashboard already uses for
+              exactly this shape of data (one number that matters most,
+              two that explain it), reused here rather than the flat
+              three-equal-columns grid this used to be. Three numbers of
+              identical size and weight made Sales fight its own context
+              for attention instead of leading it. */}
+          <section className="today-card">
+            <p className="today-card__label">{STRINGS.sales[language]}</p>
+            <p className="today-card__value">{formatCurrency(totalSales)}</p>
+            <dl className="today-card__split">
+              <div>
+                <dt>{STRINGS.spent[language]}</dt>
+                <dd className="is-spend">−{formatCurrency(totalSpent)}</dd>
+              </div>
+              <div>
+                <dt>{STRINGS.net[language]}</dt>
+                <dd className={net < 0 ? "is-negative" : "is-positive"}>{formatCurrency(net)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          {/* Quick access — both used to be full inline lists at the very
+              bottom of this screen, past all of order history. Compact
+              cards up here instead, each opening the same detail as a
+              pop-up (Dashboard already established this pattern for
+              Outstanding Credit; Spending now matches it here too). */}
+          <div className="dashboard-screen__pair reports-screen__quick-access">
+            <button type="button" className="owed-card" onClick={() => setOwedOpen(true)}>
+              <div className="owed-card__text">
+                <p className="owed-card__label">{STRINGS.onCredit[language]}</p>
+                <p className="owed-card__caption">{STRINGS.owedCaption[language]}</p>
+              </div>
+              <p className={`owed-card__value ${customers.totalOutstanding > 0 ? "is-spend" : ""}`}>
+                {formatCurrency(customers.totalOutstanding)}
+              </p>
+            </button>
+
+            <button type="button" className="owed-card" onClick={() => setSpendingOpen(true)}>
+              <div className="owed-card__text">
+                <p className="owed-card__label">{STRINGS.spending[language]}</p>
+                <p className="owed-card__caption">{STRINGS.spendingCaption[language]}</p>
+              </div>
+              <p className={`owed-card__value ${totalSpent > 0 ? "is-spend" : ""}`}>−{formatCurrency(totalSpent)}</p>
+            </button>
+          </div>
 
           <section className="reports-screen__chart">
             <SalesChart data={chartData} />
@@ -127,64 +166,39 @@ export function ReportsScreen() {
             ) : orders.length === 0 ? (
               <p className="reports-screen__status">{STRINGS.empty[language]}</p>
             ) : (
-              displayOrders.map((order) => <OrderHistoryRow key={order.orderId} order={order} />)
-            )}
-          </section>
-
-          {/* Balances are a running total, not a figure for this period —
-              they sit below the period sections for that reason. */}
-          <section className="reports-screen__history">
-            <h2 className="reports-screen__history-title">{STRINGS.onCredit[language]}</h2>
-            {customers.loading ? (
-              <p className="reports-screen__status">{STRINGS.loading[language]}</p>
-            ) : customers.outstanding.length === 0 ? (
-              <p className="reports-screen__status">{STRINGS.nobodyOwes[language]}</p>
-            ) : (
-              customers.outstanding.map((customer) => (
-                <div className="expense-row" key={customer.customerId}>
-                  <span className="expense-row__name">{customer.name}</span>
-                  <span className="expense-row__amount">{formatCurrency(customer.balance)}</span>
-                  {sessionUser && (
-                    <button
-                      type="button"
-                      className="reports-screen__collect"
-                      onClick={() => setCollectingFrom(customer)}
-                    >
-                      {STRINGS.collect[language]}
-                    </button>
-                  )}
+              // Grouped by day — like a UPI app's transaction history,
+              // replacing one long undifferentiated list. Each group's own
+              // date header is the only thing separating "yesterday" from
+              // "today" now; there used to be nothing marking that line at
+              // all.
+              dayGroups.map((group) => (
+                <div key={group.key} className="reports-screen__day-group">
+                  <h3 className="reports-screen__day-label">{group.label}</h3>
+                  {group.orders.map((order) => (
+                    <OrderHistoryRow key={order.orderId} order={order} />
+                  ))}
                 </div>
-              ))
-            )}
-          </section>
-
-          <section className="reports-screen__history">
-            <div className="reports-screen__history-header">
-              <h2 className="reports-screen__history-title">{STRINGS.spending[language]}</h2>
-              {sessionUser && (
-                <button type="button" className="reports-screen__add" onClick={() => setAddingExpense(true)}>
-                  {STRINGS.addExpense[language]}
-                </button>
-              )}
-            </div>
-            {spend.loading ? (
-              <p className="reports-screen__status">{STRINGS.loading[language]}</p>
-            ) : spend.expenses.length === 0 ? (
-              <p className="reports-screen__status">{STRINGS.emptySpending[language]}</p>
-            ) : (
-              spend.expenses.map((expense) => (
-                <ExpenseHistoryRow key={expense.expenseId} expense={expense} />
               ))
             )}
           </section>
         </>
       )}
 
-      {collectingFrom && sessionUser && (
-        <RecordPaymentModal
-          customer={collectingFrom}
-          ownerId={sessionUser.userId}
-          onClose={() => setCollectingFrom(null)}
+      {owedOpen && (
+        <OwedCustomersModal
+          customers={customers.outstanding}
+          totalOutstanding={customers.totalOutstanding}
+          onClose={() => setOwedOpen(false)}
+        />
+      )}
+
+      {spendingOpen && (
+        <TodaySpendingModal
+          title={STRINGS.spending[language]}
+          expenses={spend.expenses}
+          totalSpent={spend.totalSpent}
+          onClose={() => setSpendingOpen(false)}
+          onAdd={sessionUser ? () => setAddingExpense(true) : undefined}
         />
       )}
 

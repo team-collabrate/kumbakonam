@@ -33,12 +33,13 @@ export function getRange(mode: RangeMode, now: Date = new Date()): DateRange {
   const today = businessDayStart(now);
 
   if (mode === "recent") {
-    // Today, yesterday, the day before — matches the window
-    // archiveAndPruneOldData keeps (see dailySummary.service.ts): anything
-    // this range could show still exists as real order detail, and
-    // nothing older does (older totals come from dailySummaries instead).
+    // Today and yesterday — matches the window archiveAndPruneOldData
+    // keeps (see dailySummary.service.ts): anything this range could show
+    // still exists as real order detail, and nothing older does (older
+    // totals come from dailySummaries instead). Was today/yesterday/day-
+    // before (3 days); narrowed to 2 on explicit request 2026-09-03.
     const start = new Date(today);
-    start.setDate(start.getDate() - 2);
+    start.setDate(start.getDate() - 1);
     const end = new Date(today);
     end.setDate(end.getDate() + 1);
     return { start, end };

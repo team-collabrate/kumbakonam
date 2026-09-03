@@ -128,16 +128,16 @@ service cloud.firestore {
       // Was delete-never — voiding (above) used to be the only
       // cancellation path, specifically to keep the bill-number sequence
       // and audit trail intact. Changed on explicit product decision: the
-      // owner only wants the last 3 days searchable, older orders purged
-      // automatically (see archiveAndPruneOldData in
-      // dailySummary.service.ts, called from the Owner app — it saves
-      // each day's totals to `dailySummaries` before deleting that day's
-      // orders, so pruning detail no longer loses the history a report
-      // needs). The floor is enforced here too, not just trusted to the
-      // client — createdAt has to be more than 3 days in the past, so a
-      // compromised or buggy client can prune old orders early, never a
-      // recent one.
-      allow delete: if isSignedIn() && request.time > resource.data.createdAt + duration.value(3, 'd');
+      // owner only wants the last 2 days searchable (today/yesterday — was
+      // 3, narrowed 2026-09-03), older orders purged automatically (see
+      // archiveAndPruneOldData in dailySummary.service.ts, called from the
+      // Owner app — it saves each day's totals to `dailySummaries` before
+      // deleting that day's orders, so pruning detail no longer loses the
+      // history a report needs). The floor is enforced here too, not just
+      // trusted to the client — createdAt has to be more than 2 days in
+      // the past, so a compromised or buggy client can prune old orders
+      // early, never a recent one.
+      allow delete: if isSignedIn() && request.time > resource.data.createdAt + duration.value(2, 'd');
     }
 
     // counters — the day's bill number high-water-mark the worker app

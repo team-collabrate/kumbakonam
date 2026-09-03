@@ -89,22 +89,23 @@ function getDaysInMonth(monthStart: Date): number {
 }
 
 const RECENT_LABELS: Record<Language, string[]> = {
-  en: ["Day before", "Yesterday", "Today"],
-  ta: ["முந்தநாள்", "நேற்று", "இன்று"],
+  en: ["Yesterday", "Today"],
+  ta: ["நேற்று", "இன்று"],
 };
 
-/** 3-day view — bucket by business day, oldest to newest, matching the
- *  window archiveAndPruneOldData keeps (see dailySummary.service.ts).
- *  `rangeStart` is the range's own start (a business-day start, day before
- *  yesterday), so this never has to guess "today" independently of what
- *  the rest of the screen is already showing. */
+/** 2-day view — bucket by business day, oldest to newest, matching the
+ *  window archiveAndPruneOldData keeps (see dailySummary.service.ts). Was
+ *  3 days (day before/yesterday/today); narrowed 2026-09-03. `rangeStart`
+ *  is the range's own start (a business-day start, yesterday), so this
+ *  never has to guess "today" independently of what the rest of the
+ *  screen is already showing. */
 export function bucketByRecentDay(allOrders: Order[], rangeStart: Date, language: Language = "en"): ChartBucket[] {
   const orders = excludeVoided(allOrders);
-  const totals = [0, 0, 0];
+  const totals = [0, 0];
   for (const order of orders) {
     const orderDay = businessDayStart(order.createdAt.toDate());
     const dayIndex = Math.round((orderDay.getTime() - rangeStart.getTime()) / 86400000);
-    if (dayIndex >= 0 && dayIndex < 3) totals[dayIndex] += order.total;
+    if (dayIndex >= 0 && dayIndex < 2) totals[dayIndex] += order.total;
   }
   return RECENT_LABELS[language].map((label, i) => ({ label, total: totals[i] }));
 }

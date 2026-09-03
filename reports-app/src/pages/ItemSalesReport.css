@@ -1,0 +1,155 @@
+.sales-report {
+  min-height: 100%;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.sales-report__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.sales-report__title {
+  margin: 0;
+  font-size: var(--text-title-1);
+  letter-spacing: var(--tracking-title);
+}
+
+.sales-report__subtitle {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-body);
+}
+
+.sales-report__actions {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.sales-report__export,
+.sales-report__logout {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 160ms var(--ease-out);
+}
+
+.sales-report__export {
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.sales-report__export:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sales-report__export:active:not(:disabled),
+.sales-report__logout:active {
+  transform: scale(0.97);
+}
+
+.sales-report__logout {
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.sales-report__status,
+.sales-report__error {
+  color: var(--color-text-muted);
+  font-size: var(--text-body);
+}
+
+.sales-report__error {
+  color: var(--color-danger);
+}
+
+.sales-report__days {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.day-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.day-card__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day-card__label {
+  margin: 0;
+  font-size: var(--text-title-3);
+  letter-spacing: var(--tracking-title);
+}
+
+.day-card__meta {
+  margin: 0;
+  flex: 1;
+  color: var(--color-text-muted);
+  font-size: var(--text-footnote);
+}
+
+.day-card__total {
+  margin: 0;
+  font-size: var(--text-title-3);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent);
+}
+
+.day-card__table-wrap {
+  overflow-x: auto;
+}
+
+.day-card__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+}
+
+.day-card__table th,
+.day-card__table td {
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+}
+
+.day-card__table thead th {
+  font-size: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caption);
+  color: var(--color-text-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day-card__table tbody tr:not(:last-child) td {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day-card__table tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--color-border);
+  padding-top: var(--space-3);
+}
+
+.day-card__table .is-numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
