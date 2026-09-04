@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatCurrency, useLanguage, useSession, type Customer } from "@kumbakonam/shared";
 import { RecordPaymentModal } from "./RecordPaymentModal";
+import { CustomerHistoryModal } from "./CustomerHistoryModal";
 import "./OwedCustomersModal.css";
 
 const STRINGS = {
@@ -24,6 +25,7 @@ export function OwedCustomersModal({ customers, totalOutstanding, onClose }: Owe
   const { language } = useLanguage();
   const { sessionUser } = useSession();
   const [collectingFrom, setCollectingFrom] = useState<Customer | null>(null);
+  const [viewingHistoryFor, setViewingHistoryFor] = useState<Customer | null>(null);
 
   return (
     <>
@@ -40,7 +42,18 @@ export function OwedCustomersModal({ customers, totalOutstanding, onClose }: Owe
             <ul className="owed-modal__list">
               {customers.map((customer) => (
                 <li key={customer.customerId}>
-                  <span className="owed-modal__name">{customer.name}</span>
+                  {/* Whole name is the "view history" trigger, not a
+                      separate button — requested 2026-09-05, and this row
+                      already has no other use for a tap on the name
+                      itself. Collect stays its own explicit button since
+                      it's a real money-moving action, not a view. */}
+                  <button
+                    type="button"
+                    className="owed-modal__name"
+                    onClick={() => setViewingHistoryFor(customer)}
+                  >
+                    {customer.name}
+                  </button>
                   <span className="owed-modal__balance">{formatCurrency(customer.balance)}</span>
                   {sessionUser && (
                     <button type="button" className="owed-modal__collect" onClick={() => setCollectingFrom(customer)}>
@@ -63,6 +76,14 @@ export function OwedCustomersModal({ customers, totalOutstanding, onClose }: Owe
           customer={collectingFrom}
           ownerId={sessionUser.userId}
           onClose={() => setCollectingFrom(null)}
+        />
+      )}
+
+      {viewingHistoryFor && (
+        <CustomerHistoryModal
+          customerId={viewingHistoryFor.customerId}
+          customerName={viewingHistoryFor.name}
+          onClose={() => setViewingHistoryFor(null)}
         />
       )}
     </>

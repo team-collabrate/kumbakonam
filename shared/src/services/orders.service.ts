@@ -200,6 +200,31 @@ export function subscribeToRecentOrders(
  * firestore.rules); this path needs the same actor-verification treatment
  * before it can ship.
  */
+/**
+ * Every order this customer was ever billed for — the "what did they buy on
+ * credit" half of CustomerHistoryModal (requested 2026-09-05), the other
+ * half being customers.service.ts's getCustomerPayments. One-shot, not a
+ * live subscription: this only runs when someone actually opens a
+ * customer's history, not continuously in the background the way
+ * Sales/Expenses/Loan's always-on listeners do — deliberately, given how
+ * fragile the Firestore read quota has been.
+ *
+ * No `orderBy` in the query on purpose: `where("customerId", "==", ...)`
+ * combined with `orderBy("createdAt")` needs a composite index Firestore
+ * doesn't have yet; sorting the (small, per-customer) result client-side
+ * avoids needing to create and deploy one. `limit()` bounds a customer
+ * with an unusually long history rather than fetching everything they've
+ * ever bought.
+ */
+export async function getCustomerOrders(customerId: string, maxCount = 200): Promise<Order[]> {
+  const db = getFirestoreDb();
+  const q = query(collection(db, COLLECTION), where("customerId", "==", customerId), limit(maxCount));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ orderId: d.id, ...(d.data() as Omit<Order, "orderId">) }))
+    .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+}
+
 export type UpdateOrderInput = Partial<
   Pick<Order, "items" | "subtotal" | "discount" | "total" | "paymentMethod" | "status">
 >;

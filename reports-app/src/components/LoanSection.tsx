@@ -13,6 +13,7 @@ import {
 import { buildLoanReport } from "../utils/loanReport";
 import { nthBusinessDayStart } from "../utils/itemSalesReport";
 import { exportLoanXlsx, exportLoanCustomersXlsx } from "../utils/exportXlsx";
+import { CustomerHistoryModal } from "./CustomerHistoryModal";
 
 const STRINGS = {
   title: { en: "Loan", ta: "கடன்" },
@@ -47,6 +48,7 @@ export function LoanSection() {
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [customersLoading, setCustomersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewingHistoryFor, setViewingHistoryFor] = useState<Customer | null>(null);
 
   const range = useMemo(() => {
     const now = new Date();
@@ -158,7 +160,14 @@ export function LoanSection() {
               <tbody>
                 {customers.map((customer) => (
                   <tr key={customer.customerId}>
-                    <td>{customer.name}</td>
+                    {/* Requested 2026-09-05: tapping a customer shows what
+                        they bought on credit each time, not just the
+                        balance total this table already gives. */}
+                    <td>
+                      <button type="button" className="loan-card__customer-link" onClick={() => setViewingHistoryFor(customer)}>
+                        {customer.name}
+                      </button>
+                    </td>
                     <td className="is-numeric">{formatCurrency(customer.balance)}</td>
                   </tr>
                 ))}
@@ -262,6 +271,14 @@ export function LoanSection() {
             </section>
           ))}
         </div>
+      )}
+
+      {viewingHistoryFor && (
+        <CustomerHistoryModal
+          customerId={viewingHistoryFor.customerId}
+          customerName={viewingHistoryFor.name}
+          onClose={() => setViewingHistoryFor(null)}
+        />
       )}
     </section>
   );

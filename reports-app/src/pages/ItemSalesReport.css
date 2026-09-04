@@ -260,3 +260,15 @@
 .loan-card__summary {
   margin-bottom: var(--space-5);
 }
+
+/* A <button> (opens CustomerHistoryModal), reset to read like the plain
+   text it used to be — same table-cell font/color, just clickable. */
+.loan-card__customer-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}

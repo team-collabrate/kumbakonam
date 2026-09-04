@@ -156,6 +156,24 @@ export async function getPaymentsInRange(start: Date, end: Date): Promise<Custom
   return snap.docs.map((d) => ({ paymentId: d.id, ...(d.data() as Omit<CustomerPayment, "paymentId">) }));
 }
 
+/**
+ * Every payment this customer has ever made — the "how much came back"
+ * half of CustomerHistoryModal (requested 2026-09-05), paired with
+ * orders.service.ts's getCustomerOrders. One-shot for the same reason
+ * that one is: only runs when a customer's history is actually opened.
+ * customerPayments is append-only and never pruned (see its own
+ * firestore.rules comment), so unlike orders this has no retention-window
+ * limitation — every payment a customer ever made is still here.
+ */
+export async function getCustomerPayments(customerId: string, maxCount = 200): Promise<CustomerPayment[]> {
+  const db = getFirestoreDb();
+  const q = query(collection(db, PAYMENTS), where("customerId", "==", customerId), limit(maxCount));
+  const snap = await getDocs(q);
+  return snap.docs
+    .map((d) => ({ paymentId: d.id, ...(d.data() as Omit<CustomerPayment, "paymentId">) }))
+    .sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+}
+
 /** Realtime counterpart to getPaymentsInRange — mirrors
  *  subscribeToExpensesInRange's shape/pattern. Added for reports-app's
  *  day-wise Loan breakdown (requested 2026-09-04): "given" (credit orders)

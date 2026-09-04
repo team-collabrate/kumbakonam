@@ -39,15 +39,20 @@ export function OwnerHome({ sessionUser, onLogout }: OwnerHomeProps) {
   // orders/expenses — unlike the old pruneOldOrders, history doesn't just
   // vanish once it falls out of the 2-day detail window.
   //
-  // Was narrowed to 2 days (today/yesterday) on 2026-09-03, then widened
-  // back to 3 (today/yesterday/day-before) on 2026-09-03 later the same day
-  // — the new standalone item-sales report (reports-app/) needs real
-  // per-item detail for a 3rd day, which only exists while its orders are
-  // still live (dailySummaries only ever keeps a day's *total*, never its
-  // item list — see that collection's own comment). firestore.rules' own
-  // delete-age floor stayed at 2 days on purpose: it's a floor, not the
-  // exact window, so a 3-day cutoff here (stricter) still satisfies it —
-  // no rules change needed to widen this back.
+  // Was narrowed to 2 days (today/yesterday) on 2026-09-03, then widened to
+  // 3 (today/yesterday/day-before) later the same day for reports-app's
+  // item-sales report, then to 14 on 2026-09-05 specifically so a
+  // customer's per-item credit-purchase history (CustomerHistoryModal, in
+  // both owner-app and reports-app) has more than 3 days of real detail to
+  // show — a Khata balance routinely outlives a few days, and a total with
+  // no items behind it isn't a "history" of what was bought on credit.
+  // Deliberately NOT tied to reports-app's own 3-day Sales/Expenses/Loan
+  // display window (nthBusinessDayStart(now, 2)) — that stays 3 days on
+  // purpose, this only controls how long detail survives in Firestore
+  // before archiveAndPruneOldData squashes it to a totals-only number.
+  // firestore.rules' own delete-age floor stayed at 2 days on purpose: it's
+  // a floor, not the exact window, so a 14-day cutoff here (far stricter)
+  // still satisfies it — no rules change needed to widen this.
   //
   // Guarded to run at most once per business day (added 2026-09-03, same
   // day the project's Firestore read quota got exhausted) — this used to
@@ -68,7 +73,7 @@ export function OwnerHome({ sessionUser, onLogout }: OwnerHomeProps) {
       // Storage unavailable (private mode) — falls through and runs anyway,
       // same as before this guard existed.
     }
-    archiveAndPruneOldData(3)
+    archiveAndPruneOldData(14)
       .then(() => {
         try {
           localStorage.setItem(key, today);
