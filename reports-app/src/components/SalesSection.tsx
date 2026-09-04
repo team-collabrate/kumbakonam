@@ -60,7 +60,7 @@ export function SalesSection() {
   const days = useMemo(() => buildItemSalesReport(orders, language), [orders, language]);
 
   return (
-    <section className="report-section">
+    <section id="section-sales" className="report-section">
       <h2 className="report-section__title">{STRINGS.title[language]}</h2>
 
       {error ? (

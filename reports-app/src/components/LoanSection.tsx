@@ -9,7 +9,7 @@ import {
 import { exportLoanXlsx } from "../utils/exportXlsx";
 
 const STRINGS = {
-  title: { en: "Loan (Khata)", ta: "கடன் (கணக்கு)" },
+  title: { en: "Loan", ta: "கடன்" },
   subtitle: { en: "Who owes, right now", ta: "இப்போது யார் கடன்பட்டுள்ளனர்" },
   download: { en: "Download", ta: "பதிவிறக்கு" },
   loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
@@ -52,7 +52,7 @@ export function LoanSection() {
   const totalOutstanding = customers.reduce((sum, c) => sum + c.balance, 0);
 
   return (
-    <section className="report-section">
+    <section id="section-loan" className="report-section">
       <h2 className="report-section__title">{STRINGS.title[language]}</h2>
 
       {error ? (

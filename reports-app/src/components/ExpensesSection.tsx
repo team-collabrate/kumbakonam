@@ -58,7 +58,7 @@ export function ExpensesSection() {
   const days = useMemo(() => buildExpensesReport(expenses, language), [expenses, language]);
 
   return (
-    <section className="report-section">
+    <section id="section-expenses" className="report-section">
       <h2 className="report-section__title">{STRINGS.title[language]}</h2>
 
       {error ? (
