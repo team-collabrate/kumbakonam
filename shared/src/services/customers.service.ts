@@ -155,3 +155,30 @@ export async function getPaymentsInRange(start: Date, end: Date): Promise<Custom
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ paymentId: d.id, ...(d.data() as Omit<CustomerPayment, "paymentId">) }));
 }
+
+/** Realtime counterpart to getPaymentsInRange — mirrors
+ *  subscribeToExpensesInRange's shape/pattern. Added for reports-app's
+ *  day-wise Loan breakdown (requested 2026-09-04): "given" (credit orders)
+ *  needs pairing with "received" (payments) per day, and both need to stay
+ *  live the same way Sales/Expenses already do. */
+export function subscribeToPaymentsInRange(
+  start: Date,
+  end: Date,
+  onChange: (payments: CustomerPayment[]) => void,
+  onError?: (error: FirestoreError) => void,
+): Unsubscribe {
+  const db = getFirestoreDb();
+  const q = query(
+    collection(db, PAYMENTS),
+    where("createdAt", ">=", Timestamp.fromDate(start)),
+    where("createdAt", "<", Timestamp.fromDate(end)),
+    orderBy("createdAt", "desc"),
+  );
+  return onSnapshot(
+    q,
+    (snap) => {
+      onChange(snap.docs.map((d) => ({ paymentId: d.id, ...(d.data() as Omit<CustomerPayment, "paymentId">) })));
+    },
+    onError,
+  );
+}

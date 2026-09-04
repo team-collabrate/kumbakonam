@@ -1,82 +1,152 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   describeFirestoreError,
   formatCurrency,
+  subscribeToOrdersInRange,
   subscribeToOutstandingCustomers,
+  subscribeToPaymentsInRange,
   useLanguage,
   type Customer,
+  type CustomerPayment,
+  type Order,
 } from "@kumbakonam/shared";
-import { exportLoanXlsx } from "../utils/exportXlsx";
+import { buildLoanReport } from "../utils/loanReport";
+import { nthBusinessDayStart } from "../utils/itemSalesReport";
+import { exportLoanXlsx, exportLoanCustomersXlsx } from "../utils/exportXlsx";
 
 const STRINGS = {
   title: { en: "Loan", ta: "கடன்" },
-  subtitle: { en: "Who owes, right now", ta: "இப்போது யார் கடன்பட்டுள்ளனர்" },
   download: { en: "Download", ta: "பதிவிறக்கு" },
   loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
-  empty: { en: "Nobody owes anything right now.", ta: "இப்போது யாரும் கடன்பட்டில்லை." },
+  empty: { en: "No loan activity in the last 3 days.", ta: "கடந்த 3 நாட்களில் கடன் நடவடிக்கை இல்லை." },
+  given: { en: "Given", ta: "கொடுத்தது" },
+  received: { en: "Received", ta: "பெற்றது" },
+  net: { en: "Net", ta: "நிகர" },
   customer: { en: "Customer", ta: "வாடிக்கையாளர்" },
+  amount: { en: "Amount", ta: "தொகை" },
+  none: { en: "None", ta: "ஏதுமில்லை" },
+  customerWise: { en: "Customer-wise", ta: "வாடிக்கையாளர் வாரியாக" },
+  customerWiseSubtitle: { en: "How much each customer owes, right now", ta: "இப்போது ஒவ்வொரு வாடிக்கையாளரும் எவ்வளவு கடன்பட்டுள்ளனர்" },
   balance: { en: "Balance", ta: "நிலுவை" },
   total: { en: "Total outstanding", ta: "மொத்த நிலுவை" },
+  noneOwing: { en: "Nobody owes anything right now.", ta: "இப்போது யாரும் கடன்பட்டில்லை." },
 };
 
-/** Every customer currently owing money, itemized — requested 2026-09-04
- *  ("download the... Khata... with details as xlsv") alongside Sales and
- *  Expenses. Not day-grouped, unlike those two: a balance is a running
- *  total as of right now, not something tied to one particular day, so
- *  this is a single card/sheet rather than three days of them — and it's
- *  a live subscription (subscribeToOutstandingCustomers), so "now" really
- *  does mean now, not whenever the page happened to load. */
+/** Day-grouped loan (Khata) activity — requested 2026-09-05 ("the loan
+ *  should be separated day wise"), replacing the earlier single "who owes
+ *  right now" snapshot. Two independent live subscriptions per the same
+ *  3-day window Sales/Expenses use: credit orders (money lent) and
+ *  customerPayments (money repaid) — see buildLoanReport for how they're
+ *  paired by day. */
 export function LoanSection() {
   const { language } = useLanguage();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<CustomerPayment[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [paymentsLoading, setPaymentsLoading] = useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const range = useMemo(() => {
+    const now = new Date();
+    return { start: nthBusinessDayStart(now, 2), end: now };
+  }, []);
+
   useEffect(() => {
-    setLoading(true);
+    setOrdersLoading(true);
+    const unsubscribe = subscribeToOrdersInRange(
+      range.start,
+      range.end,
+      (result) => {
+        setError(null);
+        setOrders(result);
+        setOrdersLoading(false);
+      },
+      (err) => {
+        console.error("Orders subscription failed", err);
+        setError(describeFirestoreError(err, language));
+        setOrdersLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, [range.start, range.end, language]);
+
+  useEffect(() => {
+    setPaymentsLoading(true);
+    const unsubscribe = subscribeToPaymentsInRange(
+      range.start,
+      range.end,
+      (result) => {
+        setError(null);
+        setPayments(result);
+        setPaymentsLoading(false);
+      },
+      (err) => {
+        console.error("Payments subscription failed", err);
+        setError(describeFirestoreError(err, language));
+        setPaymentsLoading(false);
+      },
+    );
+    return unsubscribe;
+  }, [range.start, range.end, language]);
+
+  useEffect(() => {
+    setCustomersLoading(true);
     const unsubscribe = subscribeToOutstandingCustomers(
       (result) => {
         setError(null);
         setCustomers(result);
-        setLoading(false);
+        setCustomersLoading(false);
       },
       (err) => {
         console.error("Customers subscription failed", err);
         setError(describeFirestoreError(err, language));
-        setLoading(false);
+        setCustomersLoading(false);
       },
     );
     return unsubscribe;
   }, [language]);
 
+  const loading = ordersLoading || paymentsLoading;
+  const days = useMemo(() => buildLoanReport(orders, payments, language), [orders, payments, language]);
   const totalOutstanding = customers.reduce((sum, c) => sum + c.balance, 0);
 
   return (
     <section id="section-loan" className="report-section">
       <h2 className="report-section__title">{STRINGS.title[language]}</h2>
 
-      {error ? (
-        <p className="sales-report__error">{error}</p>
-      ) : loading ? (
-        <p className="sales-report__status">{STRINGS.loading[language]}</p>
-      ) : customers.length === 0 ? (
-        <p className="sales-report__status">{STRINGS.empty[language]}</p>
-      ) : (
-        <section className="day-card">
-          <div className="day-card__header">
-            <div className="day-card__heading">
-              <h3 className="day-card__label">{STRINGS.total[language]}</h3>
-              <p className="day-card__relative">{STRINGS.subtitle[language]}</p>
-            </div>
-            <p className="day-card__total">{formatCurrency(totalOutstanding)}</p>
-            <button
-              type="button"
-              className="day-card__download"
-              onClick={() => exportLoanXlsx(customers)}
-            >
-              {STRINGS.download[language]}
-            </button>
+      {/* Customer-wise, right now — requested 2026-09-05 alongside the
+          day-wise breakdown below ("customer wise we need to know - each
+          customer should give how much"): the two answer different
+          questions and neither replaces the other. Live via
+          subscribeToOutstandingCustomers, same as the original
+          single-card Loan section this was pulled out of. */}
+      <section className="day-card loan-card__summary">
+        <div className="day-card__header">
+          <div className="day-card__heading">
+            <h3 className="day-card__label">{STRINGS.customerWise[language]}</h3>
+            <p className="day-card__relative">{STRINGS.customerWiseSubtitle[language]}</p>
           </div>
+          <p className="day-card__total">{formatCurrency(totalOutstanding)}</p>
+          <button
+            type="button"
+            className="day-card__download"
+            disabled={customersLoading || customers.length === 0}
+            onClick={() => exportLoanCustomersXlsx(customers)}
+          >
+            {STRINGS.download[language]}
+          </button>
+        </div>
+        {customersLoading ? (
+          <p className="sales-report__status" style={{ padding: "var(--space-4)" }}>
+            {STRINGS.loading[language]}
+          </p>
+        ) : customers.length === 0 ? (
+          <p className="sales-report__status" style={{ padding: "var(--space-4)" }}>
+            {STRINGS.noneOwing[language]}
+          </p>
+        ) : (
           <div className="day-card__table-wrap">
             <table className="day-card__table">
               <thead>
@@ -101,7 +171,97 @@ export function LoanSection() {
               </tfoot>
             </table>
           </div>
-        </section>
+        )}
+      </section>
+
+      {error ? (
+        <p className="sales-report__error">{error}</p>
+      ) : loading ? (
+        <p className="sales-report__status">{STRINGS.loading[language]}</p>
+      ) : days.length === 0 ? (
+        <p className="sales-report__status">{STRINGS.empty[language]}</p>
+      ) : (
+        <div className="sales-report__days">
+          {days.map((day) => (
+            <section key={day.key} className="day-card">
+              <div className="day-card__header">
+                <div className="day-card__heading">
+                  <h3 className="day-card__label">{day.dateLabel}</h3>
+                  {day.relativeLabel && <p className="day-card__relative">{day.relativeLabel}</p>}
+                </div>
+                <p
+                  className="day-card__total"
+                  title={`${STRINGS.given[language]} ${formatCurrency(day.givenTotal)} − ${STRINGS.received[language]} ${formatCurrency(day.receivedTotal)}`}
+                >
+                  {formatCurrency(day.netTotal)}
+                </p>
+                <button
+                  type="button"
+                  className="day-card__download"
+                  onClick={() => exportLoanXlsx([day])}
+                >
+                  {STRINGS.download[language]}
+                </button>
+              </div>
+
+              <div className="loan-card__block">
+                <h4 className="loan-card__block-title is-given">
+                  {STRINGS.given[language]} · {formatCurrency(day.givenTotal)}
+                </h4>
+                {day.given.length === 0 ? (
+                  <p className="loan-card__none">{STRINGS.none[language]}</p>
+                ) : (
+                  <div className="day-card__table-wrap">
+                    <table className="day-card__table">
+                      <thead>
+                        <tr>
+                          <th>{STRINGS.customer[language]}</th>
+                          <th className="is-numeric">{STRINGS.amount[language]}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {day.given.map((line, i) => (
+                          <tr key={`${line.customerId}-${i}`}>
+                            <td>{line.customerName}</td>
+                            <td className="is-numeric">{formatCurrency(line.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="loan-card__block">
+                <h4 className="loan-card__block-title is-received">
+                  {STRINGS.received[language]} · {formatCurrency(day.receivedTotal)}
+                </h4>
+                {day.received.length === 0 ? (
+                  <p className="loan-card__none">{STRINGS.none[language]}</p>
+                ) : (
+                  <div className="day-card__table-wrap">
+                    <table className="day-card__table">
+                      <thead>
+                        <tr>
+                          <th>{STRINGS.customer[language]}</th>
+                          <th className="is-numeric">{STRINGS.amount[language]}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {day.received.map((line, i) => (
+                          <tr key={`${line.customerId}-${i}`}>
+                            <td>{line.customerName}</td>
+                            <td className="is-numeric">{formatCurrency(line.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </section>
+          ))}
+        </div>
       )}
     </section>
   );

@@ -176,8 +176,13 @@
   transition: transform 160ms var(--ease-out);
 }
 
-.day-card__download:active {
+.day-card__download:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.day-card__download:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .day-card__table-wrap {
@@ -217,4 +222,41 @@
 .day-card__table .is-numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* Loan's two sub-blocks per day (Given / Received) — each its own small
+   table under a labeled heading, inside the same day-card Sales/Expenses
+   use, rather than a second card type. */
+.loan-card__block {
+  padding: var(--space-3) var(--space-4);
+}
+
+.loan-card__block + .loan-card__block {
+  border-top: 1px solid var(--color-border);
+}
+
+.loan-card__block-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caption);
+}
+
+.loan-card__block-title.is-given {
+  color: var(--color-danger);
+}
+
+.loan-card__block-title.is-received {
+  color: var(--color-positive-text, var(--color-success));
+}
+
+.loan-card__none {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-footnote);
+}
+
+.loan-card__summary {
+  margin-bottom: var(--space-5);
 }

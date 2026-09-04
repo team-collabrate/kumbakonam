@@ -1,6 +1,7 @@
 import type { Customer } from "@kumbakonam/shared";
 import type { DaySalesReport } from "./itemSalesReport";
 import type { DayExpensesReport } from "./expensesReport";
+import type { DayLoanReport } from "./loanReport";
 
 // Fixed 3-letter abbreviations, not toLocaleDateString's "short" — en-IN
 // (and most locales) render September as 4-letter "Sept", which broke the
@@ -100,13 +101,43 @@ export async function exportExpensesXlsx(days: DayExpensesReport[]): Promise<voi
   XLSX.writeFile(workbook, `${dayStamp(days)}-expenses.xlsx`);
 }
 
-/** Every customer currently owing money (requested 2026-09-04: "download
- *  the... Khata [loan]... with details") — the itemized per-customer list,
- *  not just the combined "Outstanding Credit" total the quick-access card
- *  shows. Not day-grouped like sales/expenses: a balance is a running
- *  total, not something that happened on one particular day, so one sheet
- *  covering "right now" is the correct shape here, not three days of them. */
-export async function exportLoanXlsx(customers: Customer[]): Promise<void> {
+/** Day-grouped loan (Khata) activity — requested 2026-09-05 ("the loan
+ *  should be separated day wise"), replacing the earlier single "who owes
+ *  right now" snapshot export. Each day's sheet lists what was lent
+ *  ("Given" — new credit sales) and what came back ("Received" —
+ *  payments), each its own labeled block so the two never run together,
+ *  then a Net row (Given − Received: how much the loan book grew or
+ *  shrank that day). */
+export async function exportLoanXlsx(days: DayLoanReport[]): Promise<void> {
+  const XLSX = await import("xlsx");
+  const workbook = XLSX.utils.book_new();
+
+  for (const day of days) {
+    const rows: Array<Record<string, string | number>> = [];
+    rows.push({ Type: "GIVEN", Customer: "", "Amount (₹)": "" });
+    for (const line of day.given) rows.push({ Type: "", Customer: line.customerName, "Amount (₹)": line.amount });
+    rows.push({ Type: "", Customer: "Given total", "Amount (₹)": day.givenTotal });
+    rows.push({ Type: "", Customer: "", "Amount (₹)": "" });
+    rows.push({ Type: "RECEIVED", Customer: "", "Amount (₹)": "" });
+    for (const line of day.received) rows.push({ Type: "", Customer: line.customerName, "Amount (₹)": line.amount });
+    rows.push({ Type: "", Customer: "Received total", "Amount (₹)": day.receivedTotal });
+    rows.push({ Type: "", Customer: "", "Amount (₹)": "" });
+    rows.push({ Type: "NET", Customer: "Given − Received", "Amount (₹)": day.netTotal });
+
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    sheet["!cols"] = [{ wch: 10 }, { wch: 28 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(workbook, sheet, day.key);
+  }
+
+  XLSX.writeFile(workbook, `${dayStamp(days)}-loan.xlsx`);
+}
+
+/** Every customer currently owing money, one row each (requested
+ *  2026-09-05: "customer wise we need to know - each customer should give
+ *  how much") — a running total as of right now, separate from the
+ *  day-wise Given/Received activity log above: this answers "who owes
+ *  what overall", that answers "what happened on which day". */
+export async function exportLoanCustomersXlsx(customers: Customer[]): Promise<void> {
   const XLSX = await import("xlsx");
   const totalOutstanding = customers.reduce((sum, c) => sum + c.balance, 0);
 
@@ -121,5 +152,5 @@ export async function exportLoanXlsx(customers: Customer[]): Promise<void> {
   sheet["!cols"] = [{ wch: 28 }, { wch: 14 }];
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Loan");
-  XLSX.writeFile(workbook, `${fileDateStamp()}-loan.xlsx`);
+  XLSX.writeFile(workbook, `${fileDateStamp()}-loan-balances.xlsx`);
 }
