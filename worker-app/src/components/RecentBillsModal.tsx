@@ -13,8 +13,8 @@ const PAYMENT_LABEL: Record<Order["paymentMethod"], Record<Language, string>> = 
 const STRINGS = {
   title: { en: "Delete a recent bill", ta: "சமீபத்திய பில்லை நீக்கு" },
   subtitle: {
-    en: "Only the last 3 bills, and only within 30 minutes of billing — after that, ask the owner to void it.",
-    ta: "கடைசி 3 பில்கள் மட்டும், பில் செய்து 30 நிமிடத்திற்குள் மட்டும் — அதன் பிறகு உரிமையாளரிடம் ரத்துசெய்யக் கேளுங்கள்.",
+    en: "Only the last 3 bills, and only until the end of the day — after that, ask the owner to void it.",
+    ta: "கடைசி 3 பில்கள் மட்டும், அன்றைய நாள் முடிவதற்குள் மட்டும் — அதன் பிறகு உரிமையாளரிடம் ரத்துசெய்யக் கேளுங்கள்.",
   },
   empty: { en: "No recent bills.", ta: "சமீபத்திய பில்கள் இல்லை." },
   loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
@@ -26,8 +26,8 @@ const STRINGS = {
   },
   deleteConfirm: { en: "Delete Bill", ta: "பில்லை நீக்கு" },
   deleteFailed: {
-    en: "Could not delete the bill. It may be older than 30 minutes now — ask the owner instead.",
-    ta: "பில்லை நீக்க முடியவில்லை. இது இப்போது 30 நிமிடங்களுக்கு மேல் இருக்கலாம் — உரிமையாளரிடம் கேளுங்கள்.",
+    en: "Could not delete the bill. It may be from an earlier day now — ask the owner instead.",
+    ta: "பில்லை நீக்க முடியவில்லை. இது முந்தைய நாளைச் சேர்ந்ததாக இருக்கலாம் — உரிமையாளரிடம் கேளுங்கள்.",
   },
   close: { en: "Close", ta: "மூடு" },
 };
@@ -35,14 +35,14 @@ const STRINGS = {
 export interface RecentBillsModalProps {
   orders: Order[];
   loading: boolean;
-  /** The signed-in account voiding the bill — see firestore.rules' 30-minute worker-void window. */
+  /** The signed-in account voiding the bill — see firestore.rules' 24-hour worker-void window. */
   workerId: string;
   onClose: () => void;
 }
 
 /** Sidebar panel: void one of the last 3 bills this device just took, in
  *  case of a mis-billed order — see subscribeToRecentOrders and
- *  firestore.rules for the "last 3, within 30 minutes" limits this only
+ *  firestore.rules for the "last 3, within 24 hours" limits this only
  *  displays, not enforces (the rule is the real boundary). */
 export function RecentBillsModal({ orders, loading, workerId, onClose }: RecentBillsModalProps) {
   const { language } = useLanguage();

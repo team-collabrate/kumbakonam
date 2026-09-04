@@ -168,7 +168,7 @@ export function OrderHistoryRow({ order }: OrderHistoryRowProps) {
           {/* This screen's own void button, unrestricted by time — the
               owner's separate, any-order-any-age path (see firestore.rules).
               The Worker app has its own, narrower version of this same
-              action (RecentBillsModal: last 3 bills, 30-minute window),
+              action (RecentBillsModal: last 3 bills, 24-hour window),
               which is why the rule now accepts either actor rather than
               gating void to owner alone. */}
           {!isVoided && (

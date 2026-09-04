@@ -160,7 +160,7 @@ export function subscribeToOrdersInRange(
 /**
  * Live view of the most recently billed orders, across any worker on this
  * device — backs the Worker app's "delete recent bill" panel (firestore.rules
- * lets a worker void their own just-billed order within 30 minutes, so a
+ * lets a worker void their own just-billed order within 24 hours, so a
  * mis-billed sale can be undone without waiting for the owner). Fetches more
  * than `count` and filters voided orders out client-side rather than adding
  * a `where("status", "!=", "voided")` — that would need a composite index
