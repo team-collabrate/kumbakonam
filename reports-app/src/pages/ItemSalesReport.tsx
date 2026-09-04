@@ -5,7 +5,6 @@ import { LoanSection } from "../components/LoanSection";
 import "./ItemSalesReport.css";
 
 const STRINGS = {
-  title: { en: "Reports", ta: "அறிக்கைகள்" },
   logout: { en: "Log out", ta: "வெளியேறு" },
   navSales: { en: "Sales", ta: "விற்பனை" },
   navExpenses: { en: "Expenses", ta: "செலவுகள்" },
@@ -45,7 +44,20 @@ export function ItemSalesReport({ onLogout }: ItemSalesReportProps) {
   return (
     <div className="sales-report">
       <header className="sales-report__header">
-        <h1 className="sales-report__title">{STRINGS.title[language]}</h1>
+        {/* Logo instead of a "Reports" text heading — requested 2026-09-04.
+            Same asset/onError pattern as PinEntryScreen's own logo (shared
+            package has no asset pipeline; each app serves its own
+            public/logo.png), copied into reports-app/public for this. */}
+        <img
+          className="sales-report__logo"
+          src="/logo.png"
+          alt="Kumbakonam Cafe"
+          width={44}
+          height={40}
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
         <div className="sales-report__actions">
           <LanguageToggle />
           <button type="button" className="sales-report__logout" onClick={onLogout}>

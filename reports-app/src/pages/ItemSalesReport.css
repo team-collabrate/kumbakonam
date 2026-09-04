@@ -7,17 +7,16 @@
 
 .sales-report__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   flex-wrap: wrap;
   margin-bottom: var(--space-5);
 }
 
-.sales-report__title {
-  margin: 0;
-  font-size: var(--text-title-1);
-  letter-spacing: var(--tracking-title);
+.sales-report__logo {
+  display: block;
+  object-fit: contain;
 }
 
 .sales-report__actions {
