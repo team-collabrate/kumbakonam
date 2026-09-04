@@ -58,6 +58,21 @@
   color: var(--color-danger);
 }
 
+/* One per report (Sales, Expenses, Loan) — a hairline between them so
+   scrolling past one into the next has a real seam, same divider pattern
+   used between day-groups within a section. */
+.report-section + .report-section {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.report-section__title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-title-2);
+  letter-spacing: var(--tracking-title);
+}
+
 .sales-report__days {
   display: flex;
   flex-direction: column;
@@ -81,11 +96,15 @@
 }
 
 /* Date is the main heading; (Today)/(Yesterday) — when present — sits
-   under it as a subheading, not folded into the same line. */
+   under it as a subheading, not folded into the same line. margin-right:
+   auto (not flex:1 on the meta text after it) pushes everything that
+   follows to the row's right edge regardless of whether a meta line is
+   present — Sales has one ("402 orders"), Expenses/Loan don't. */
 .day-card__heading {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-right: auto;
 }
 
 .day-card__label {
@@ -105,7 +124,6 @@
 
 .day-card__meta {
   margin: 0;
-  flex: 1;
   color: var(--color-text-muted);
   font-size: var(--text-footnote);
 }
