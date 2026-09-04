@@ -20,7 +20,18 @@
 //                                account's real login password.
 //   AUDITOR_EMAIL              — recipient address (comma-separated for more than one)
 //
+// Optional:
+//   REPORT_DATE — YYYY-MM-DD, to (re)send a specific past business day
+//                 instead of "today" (e.g. backfilling a day the schedule
+//                 failed on — added 2026-09-04 after the very first
+//                 scheduled run failed on RESOURCE_EXHAUSTED and the
+//                 auditor got nothing for that day at all). Only works
+//                 while that day's orders are still live — see
+//                 archiveAndPruneOldData's keepDays in OwnerHome.tsx for
+//                 how many days back that is.
+//
 // Usage: node scripts/send-daily-report-email.mjs
+//        REPORT_DATE=2026-09-03 node scripts/send-daily-report-email.mjs
 
 import { cert, initializeApp } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
@@ -52,14 +63,24 @@ const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
-async function buildTodaysReport() {
-  const now = new Date();
-  const start = businessDayStart(now);
+async function buildDayReport() {
+  // REPORT_DATE backfills a specific past business day; otherwise "today"
+  // — matching every other caller of businessDayStart in this project.
+  const target = process.env.REPORT_DATE ? new Date(`${process.env.REPORT_DATE}T12:00:00`) : new Date();
+  const start = businessDayStart(target);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
   // Sent at 11:59 PM by design (requested 2026-09-03) — the business day
   // itself doesn't end until 3am, so anything billed between send time and
   // 3am is deliberately NOT in this report; it shows up in the next day's
-  // instead. See the workflow file's own comment for the same note.
-  const snap = await db.collection("orders").where("createdAt", ">=", Timestamp.fromDate(start)).get();
+  // instead. See the workflow file's own comment for the same note. The
+  // upper bound only matters for a REPORT_DATE backfill — "today" has
+  // nothing past `end` yet regardless.
+  const snap = await db
+    .collection("orders")
+    .where("createdAt", ">=", Timestamp.fromDate(start))
+    .where("createdAt", "<", Timestamp.fromDate(end))
+    .get();
 
   const items = new Map();
   let totalSales = 0;
@@ -156,7 +177,43 @@ async function sendEmail(report, xlsxBuffer, dateKey) {
   });
 }
 
-const report = await buildTodaysReport();
-const { buffer, dateKey } = buildXlsx(report);
-await sendEmail(report, buffer, dateKey);
-console.log(`Sent ${dateKey} report (${report.orderCount} orders, ₹${report.totalSales.toFixed(2)}) to ${process.env.AUDITOR_EMAIL}`);
+/** Best-effort "something went wrong" notice — so a failed run means the
+ *  auditor hears about it, not silence (added 2026-09-04: the very first
+ *  scheduled run failed on RESOURCE_EXHAUSTED and nobody knew until asked
+ *  directly the next day). Deliberately doesn't touch Firestore — if that's
+ *  what failed, this still has a real chance of getting through since Gmail
+ *  SMTP is a wholly separate quota. Swallows its own failure; the workflow
+ *  step already exits non-zero either way, which is what actually surfaces
+ *  in the Actions tab. */
+async function sendFailureNotice(error) {
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD },
+    });
+    await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: process.env.AUDITOR_EMAIL.split(",").map((s) => s.trim()),
+      subject: "Kumbakonam Cafe — Sales report FAILED to generate",
+      text:
+        `Today's automated sales report could not be generated or sent.\n\n` +
+        `Error: ${error?.message ?? String(error)}\n\n` +
+        `No action needed from you — this is informational so a missing report ` +
+        `doesn't go unnoticed. It can be resent manually once the underlying ` +
+        `issue clears (e.g. via REPORT_DATE, see scripts/send-daily-report-email.mjs).`,
+    });
+  } catch (notifyErr) {
+    console.error("Failure notice itself also failed to send:", notifyErr);
+  }
+}
+
+try {
+  const report = await buildDayReport();
+  const { buffer, dateKey } = buildXlsx(report);
+  await sendEmail(report, buffer, dateKey);
+  console.log(`Sent ${dateKey} report (${report.orderCount} orders, ₹${report.totalSales.toFixed(2)}) to ${process.env.AUDITOR_EMAIL}`);
+} catch (err) {
+  console.error("Report generation/send failed:", err);
+  await sendFailureNotice(err);
+  process.exit(1);
+}

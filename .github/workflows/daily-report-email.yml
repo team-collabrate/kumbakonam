@@ -22,8 +22,17 @@ on:
   schedule:
     - cron: "29 18 * * *"
   # Manual "Run workflow" button in the Actions tab — for testing without
-  # waiting for 11:59 PM, or resending a day's report on request.
-  workflow_dispatch: {}
+  # waiting for 11:59 PM, or resending a day's report on request. Leave
+  # report_date blank for "today"; fill it in (YYYY-MM-DD) to (re)send a
+  # specific past day — added 2026-09-04 after the very first scheduled
+  # run failed (Firestore quota) and that day's report had no way to be
+  # recovered once "today" moved on.
+  workflow_dispatch:
+    inputs:
+      report_date:
+        description: "Business day to send (YYYY-MM-DD) — leave blank for today"
+        required: false
+        type: string
 
 jobs:
   send-report:
@@ -44,3 +53,4 @@ jobs:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           AUDITOR_EMAIL: ${{ secrets.AUDITOR_EMAIL }}
+          REPORT_DATE: ${{ inputs.report_date }}
