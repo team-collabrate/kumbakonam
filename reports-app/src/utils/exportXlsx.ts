@@ -46,6 +46,12 @@ export async function exportItemSalesXlsx(days: DaySalesReport[], filenamePrefix
     XLSX.utils.book_append_sheet(workbook, sheet, day.key);
   }
 
-  const stamp = new Date().toISOString().slice(0, 10);
+  // A single-day download (the per-day "Download" button, requested
+  // 2026-09-04) names the file after the day it actually covers, not the
+  // day it happened to be downloaded on — "kumbakonam-sales-2026-09-03.xlsx"
+  // stays correct even opened a week later. Only a multi-day export (kept
+  // for reuse, nothing currently calls it that way) falls back to today's
+  // date, since there's no single day to name it after.
+  const stamp = days.length === 1 ? days[0].key : new Date().toISOString().slice(0, 10);
   XLSX.writeFile(workbook, `${filenamePrefix}-${stamp}.xlsx`);
 }

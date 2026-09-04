@@ -22,7 +22,14 @@ export interface ItemSalesLine {
 export interface DaySalesReport {
   /** businessDayKey — YYYY-MM-DD */
   key: string;
-  label: string;
+  /** The real calendar date, e.g. "03 Sep" — always present, the main
+   *  heading. */
+  dateLabel: string;
+  /** "Today" / "Yesterday", only for those two days — a subheading under
+   *  dateLabel, not folded into it (requested 2026-09-04: "date is main
+   *  so write today - yesterday as sub heading"). Undefined for any older
+   *  day, which has nothing to add beyond its date. */
+  relativeLabel: string | undefined;
   totalSales: number;
   orderCount: number;
   items: ItemSalesLine[];
@@ -37,22 +44,20 @@ export function nthBusinessDayStart(now: Date, daysAgo: number): Date {
   return start;
 }
 
-/** Always the real calendar date, e.g. "03 Sep" — (Today)/(Yesterday) only
- *  ever a bracketed suffix on top of that, never a replacement for it, so
- *  the label answers "which date" on its own even without the relative
- *  hint (requested 2026-09-03: "add real date and with bracket (today)
- *  (yesterday)"). */
-function dayLabel(key: string, language: Language): string {
+/** The real calendar date (main heading) plus, for today/yesterday only, a
+ *  relative label (subheading) — kept as two separate strings rather than
+ *  one combined line so the caller controls which reads as primary. */
+function dayLabels(key: string, language: Language): { dateLabel: string; relativeLabel: string | undefined } {
   const [y, m, d] = key.split("-").map(Number);
   // Reconstruct a real Date at the business day's own 3am start so
   // weekday/month come out right regardless of the viewer's timezone quirks.
   const date = new Date(y, m - 1, d, 3, 0, 0);
-  const dateText = date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  const dateLabel = date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
   const todayKey = businessDayKey(new Date());
   const yesterdayKey = businessDayKey(new Date(Date.now() - 24 * 60 * 60 * 1000));
-  if (key === todayKey) return `${dateText} (${language === "ta" ? "இன்று" : "Today"})`;
-  if (key === yesterdayKey) return `${dateText} (${language === "ta" ? "நேற்று" : "Yesterday"})`;
-  return dateText;
+  if (key === todayKey) return { dateLabel, relativeLabel: language === "ta" ? "இன்று" : "Today" };
+  if (key === yesterdayKey) return { dateLabel, relativeLabel: language === "ta" ? "நேற்று" : "Yesterday" };
+  return { dateLabel, relativeLabel: undefined };
 }
 
 /** Groups non-voided orders by business day and, within each day, by item —
@@ -103,7 +108,7 @@ export function buildItemSalesReport(orders: Order[], language: Language): DaySa
     .sort(([a], [b]) => (a < b ? 1 : -1)) // newest business-day key first
     .map(([key, day]) => ({
       key,
-      label: dayLabel(key, language),
+      ...dayLabels(key, language),
       totalSales: day.totalSales,
       orderCount: day.orderCount,
       items: [...day.items.values()]

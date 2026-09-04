@@ -31,7 +31,6 @@
   gap: var(--space-3);
 }
 
-.sales-report__export,
 .sales-report__logout {
   border: none;
   border-radius: var(--radius-md);
@@ -40,27 +39,13 @@
   font-weight: 600;
   cursor: pointer;
   transition: transform 160ms var(--ease-out);
-}
-
-.sales-report__export {
-  background: var(--color-accent);
-  color: var(--color-accent-contrast);
-}
-
-.sales-report__export:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.sales-report__export:active:not(:disabled),
-.sales-report__logout:active {
-  transform: scale(0.97);
-}
-
-.sales-report__logout {
   background: var(--color-surface);
   color: var(--color-text-muted);
   border: 1px solid var(--color-border);
+}
+
+.sales-report__logout:active {
+  transform: scale(0.97);
 }
 
 .sales-report__status,
@@ -88,16 +73,34 @@
 
 .day-card__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border);
+}
+
+/* Date is the main heading; (Today)/(Yesterday) — when present — sits
+   under it as a subheading, not folded into the same line. */
+.day-card__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .day-card__label {
   margin: 0;
   font-size: var(--text-title-3);
   letter-spacing: var(--tracking-title);
+}
+
+.day-card__relative {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caption);
+  color: var(--color-accent);
 }
 
 .day-card__meta {
@@ -113,6 +116,23 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-accent);
+}
+
+.day-card__download {
+  flex: none;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  transition: transform 160ms var(--ease-out);
+}
+
+.day-card__download:active {
+  transform: scale(0.97);
 }
 
 .day-card__table-wrap {

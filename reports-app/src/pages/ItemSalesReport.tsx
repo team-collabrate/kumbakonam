@@ -14,7 +14,7 @@ import "./ItemSalesReport.css";
 const STRINGS = {
   title: { en: "Sales Report", ta: "விற்பனை அறிக்கை" },
   subtitle: { en: "Last 3 days, item by item", ta: "கடந்த 3 நாட்கள், பொருள் வாரியாக" },
-  export: { en: "Export XLSX", ta: "XLSX ஏற்றுமதி" },
+  download: { en: "Download", ta: "பதிவிறக்கு" },
   logout: { en: "Log out", ta: "வெளியேறு" },
   loading: { en: "Loading…", ta: "ஏற்றுகிறது…" },
   empty: { en: "No orders in the last 3 days.", ta: "கடந்த 3 நாட்களில் ஆர்டர்கள் இல்லை." },
@@ -79,14 +79,6 @@ export function ItemSalesReport({ onLogout }: ItemSalesReportProps) {
         </div>
         <div className="sales-report__actions">
           <LanguageToggle />
-          <button
-            type="button"
-            className="sales-report__export"
-            disabled={days.length === 0}
-            onClick={() => exportItemSalesXlsx(days, "kumbakonam-sales")}
-          >
-            {STRINGS.export[language]}
-          </button>
           <button type="button" className="sales-report__logout" onClick={onLogout}>
             {STRINGS.logout[language]}
           </button>
@@ -104,11 +96,32 @@ export function ItemSalesReport({ onLogout }: ItemSalesReportProps) {
           {days.map((day) => (
             <section key={day.key} className="day-card">
               <div className="day-card__header">
-                <h2 className="day-card__label">{day.label}</h2>
+                <div className="day-card__heading">
+                  {/* Date is the main heading, (Today)/(Yesterday) a
+                      subheading under it — requested 2026-09-04 ("date is
+                      main so write today - yesterday as sub heading"),
+                      replacing the earlier bracketed "03 Sept (Today)"
+                      single line. */}
+                  <h2 className="day-card__label">{day.dateLabel}</h2>
+                  {day.relativeLabel && <p className="day-card__relative">{day.relativeLabel}</p>}
+                </div>
                 <p className="day-card__meta">
                   {day.orderCount} {STRINGS.orders[language]}
                 </p>
                 <p className="day-card__total">{formatCurrency(day.totalSales)}</p>
+                {/* One button per day, not one combined export — requested
+                    2026-09-04 ("download today and download yesterday and
+                    day before yesterday" as separate buttons). Each still
+                    reuses exportItemSalesXlsx, just with a single-day
+                    array — it already writes one sheet per day passed in,
+                    so a length-1 array is just a one-sheet workbook. */}
+                <button
+                  type="button"
+                  className="day-card__download"
+                  onClick={() => exportItemSalesXlsx([day], "kumbakonam-sales")}
+                >
+                  {STRINGS.download[language]}
+                </button>
               </div>
               <div className="day-card__table-wrap">
                 <table className="day-card__table">
