@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { createExpense, useLanguage } from "@kumbakonam/shared";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { createExpense, uploadExpenseReceipt, useLanguage } from "@kumbakonam/shared";
 import "./ExpenseModal.css";
 
 const STRINGS = {
@@ -15,6 +15,9 @@ const STRINGS = {
   close: { en: "Close", ta: "மூடு" },
   needName: { en: "Type what was bought.", ta: "என்ன வாங்கியது என்று எழுதவும்." },
   needAmount: { en: "Enter an amount above zero.", ta: "பூஜ்ஜியத்திற்கு மேல் தொகையை உள்ளிடவும்." },
+  addPhoto: { en: "Add bill photo", ta: "பில் புகைப்படம் சேர்" },
+  retakePhoto: { en: "Change photo", ta: "புகைப்படத்தை மாற்று" },
+  removePhoto: { en: "Remove", ta: "நீக்கு" },
 };
 
 export interface ExpenseModalProps {
@@ -44,7 +47,23 @@ export function ExpenseModal({
   const [name, setName] = useState(initialName);
   const [amount, setAmount] = useState(initialAmount);
   const [error, setError] = useState<string | null>(initialError);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  // object URL, not a data: URL — cheap for a multi-megabyte camera photo,
+  // and revoked on every change/unmount so a swapped or abandoned photo
+  // doesn't leak memory across however many expenses get entered in a day.
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -76,7 +95,7 @@ export function ExpenseModal({
         return;
       }
 
-      const { committed } = createExpense({ name: trimmed, amount: value, workerId });
+      const { expenseId, committed } = createExpense({ name: trimmed, amount: value, workerId });
 
       // Saved the moment it's in the local cache — the write syncs on its
       // own. Awaiting would hold the dialog open for the length of any wifi
@@ -91,9 +110,33 @@ export function ExpenseModal({
         console.error("Expense write refused", err);
         onFailed({ name: trimmed, amount });
       });
+
+      // Fire-and-forget, same as the expense write itself above — the
+      // photo is proof-of-purchase, not the record of money spent, so a
+      // failed or offline upload should never reopen the dialog or block
+      // anything the way a refused expense write does. Uploading only
+      // after the expense document exists (not alongside it) is
+      // deliberate: Cloudinary has no offline queue the way Firestore does,
+      // so this genuinely can fail on bad connectivity where the expense
+      // itself just quietly queues and syncs later — see
+      // uploadExpenseReceipt's own comment.
+      if (photo) {
+        uploadExpenseReceipt(expenseId, photo).catch((err) => {
+          console.error("Receipt photo upload failed (expense itself was still saved)", err);
+        });
+      }
     },
-    [name, amount, workerId, language, onSaved, onFailed],
+    [name, amount, photo, workerId, language, onSaved, onFailed],
   );
+
+  const handlePhotoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPhoto(file ?? null);
+    // Lets picking the exact same file again re-fire onChange (e.g. after
+    // "Remove" then re-adding the same photo) — the input's own value
+    // otherwise stays unchanged and no change event fires a second time.
+    e.target.value = "";
+  }, []);
 
   return (
     <div className="expense__backdrop" role="dialog" aria-modal="true" aria-label={STRINGS.title[language]}>
@@ -127,6 +170,40 @@ export function ExpenseModal({
             onChange={(e) => setAmount(e.target.value)}
           />
         </label>
+
+        {/* accept + capture: on a phone/tablet this opens straight to the
+            camera by default, but the native chooser it triggers still
+            offers gallery/files alongside it — no separate "pick from
+            gallery" control needed (requested 2026-09-05: "camera or
+            gallery"). Hidden input + a real button, not a bare <input
+            type=file>, to match this form's own button styling. */}
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={handlePhotoChange}
+        />
+        <div className="expense__photo-field">
+          {photoPreviewUrl ? (
+            <div className="expense__photo-preview">
+              <img src={photoPreviewUrl} alt="" />
+              <div className="expense__photo-preview-actions">
+                <button type="button" onClick={() => photoInputRef.current?.click()}>
+                  {STRINGS.retakePhoto[language]}
+                </button>
+                <button type="button" onClick={() => setPhoto(null)}>
+                  {STRINGS.removePhoto[language]}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" className="expense__photo-add" onClick={() => photoInputRef.current?.click()}>
+              {STRINGS.addPhoto[language]}
+            </button>
+          )}
+        </div>
 
         <div className="expense__status" role="status">
           {error ?? " "}

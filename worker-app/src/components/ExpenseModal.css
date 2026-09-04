@@ -84,6 +84,63 @@
   appearance: textfield;
 }
 
+.expense__photo-field {
+  display: flex;
+}
+
+.expense__photo-add {
+  width: 100%;
+  min-height: 52px;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 110ms var(--ease-out);
+}
+
+.expense__photo-add:active {
+  transform: scale(0.98);
+}
+
+.expense__photo-preview {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+}
+
+.expense__photo-preview img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm, 8px);
+  object-fit: cover;
+  flex: none;
+}
+
+.expense__photo-preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.expense__photo-preview-actions button {
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--text-footnote);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+
 .expense__status {
   min-height: 20px;
   font-size: var(--text-footnote);

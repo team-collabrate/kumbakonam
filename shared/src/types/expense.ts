@@ -19,4 +19,16 @@ export interface Expense {
   createdAt: Timestamp;
   /** Set once the write is confirmed by the server; null while queued offline. */
   syncedAt: Timestamp | null;
+  /**
+   * Download URL of the shop's bill/receipt photo, in Firebase Storage —
+   * proof of what was actually bought, for later review (requested
+   * 2026-09-05). Set after the expense document itself already exists (see
+   * uploadExpenseReceipt) — attaching a photo never blocks or delays
+   * recording the expense, which the offline-first till flow depends on
+   * working even with no photo (or no connectivity to upload one) at all.
+   * Absent entirely on every expense recorded before this existed, and on
+   * any expense whose photo upload never completed (e.g. offline, or the
+   * worker skipped it).
+   */
+  receiptPhotoUrl?: string;
 }

@@ -1,5 +1,5 @@
-import { useCallback, useState, type FormEvent } from "react";
-import { createExpense, useLanguage } from "@kumbakonam/shared";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { createExpense, uploadExpenseReceipt, useLanguage } from "@kumbakonam/shared";
 import "./RecordExpenseModal.css";
 
 const STRINGS = {
@@ -16,6 +16,9 @@ const STRINGS = {
   needName: { en: "Type what was bought.", ta: "என்ன வாங்கியது என்று எழுதவும்." },
   needAmount: { en: "Enter an amount above zero.", ta: "பூஜ்ஜியத்திற்கு மேல் தொகையை உள்ளிடவும்." },
   failed: { en: "Could not save. Try again.", ta: "சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்." },
+  addPhoto: { en: "Add bill photo", ta: "பில் புகைப்படம் சேர்" },
+  retakePhoto: { en: "Change photo", ta: "புகைப்படத்தை மாற்று" },
+  removePhoto: { en: "Remove", ta: "நீக்கு" },
 };
 
 export interface RecordExpenseModalProps {
@@ -38,6 +41,25 @@ export function RecordExpenseModal({ ownerId, onClose }: RecordExpenseModalProps
   const [amount, setAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!photo) {
+      setPhotoPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(photo);
+    setPhotoPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [photo]);
+
+  const handlePhotoChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setPhoto(file ?? null);
+    e.target.value = "";
+  }, []);
 
   const handleSubmit = useCallback(
     (e: FormEvent) => {
@@ -55,16 +77,26 @@ export function RecordExpenseModal({ ownerId, onClose }: RecordExpenseModalProps
       }
 
       setSaving(true);
-      const { committed } = createExpense({ name: trimmed, amount: value, workerId: ownerId });
+      const { expenseId, committed } = createExpense({ name: trimmed, amount: value, workerId: ownerId });
       committed
-        .then(() => onClose())
+        .then(() => {
+          // Fire-and-forget, same reasoning as the worker app's
+          // ExpenseModal — a failed photo upload should never undo an
+          // already-successful expense save, so this doesn't block closing.
+          if (photo) {
+            uploadExpenseReceipt(expenseId, photo).catch((err) => {
+              console.error("Receipt photo upload failed (expense itself was still saved)", err);
+            });
+          }
+          onClose();
+        })
         .catch((err) => {
           console.error("Expense write refused", err);
           setError(STRINGS.failed[language]);
           setSaving(false);
         });
     },
-    [name, amount, ownerId, language, onClose],
+    [name, amount, photo, ownerId, language, onClose],
   );
 
   return (
@@ -99,6 +131,38 @@ export function RecordExpenseModal({ ownerId, onClose }: RecordExpenseModalProps
             onChange={(e) => setAmount(e.target.value)}
           />
         </label>
+
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={handlePhotoChange}
+        />
+        <div className="record-expense__photo-field">
+          {photoPreviewUrl ? (
+            <div className="record-expense__photo-preview">
+              <img src={photoPreviewUrl} alt="" />
+              <div className="record-expense__photo-preview-actions">
+                <button type="button" onClick={() => photoInputRef.current?.click()}>
+                  {STRINGS.retakePhoto[language]}
+                </button>
+                <button type="button" onClick={() => setPhoto(null)}>
+                  {STRINGS.removePhoto[language]}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="record-expense__photo-add"
+              onClick={() => photoInputRef.current?.click()}
+            >
+              {STRINGS.addPhoto[language]}
+            </button>
+          )}
+        </div>
 
         <div className="record-expense__status" role="status">
           {error ?? " "}
