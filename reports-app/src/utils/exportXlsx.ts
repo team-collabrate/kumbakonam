@@ -103,24 +103,25 @@ export async function exportExpensesXlsx(days: DayExpensesReport[]): Promise<voi
 
 /** Day-grouped loan (Khata) activity — requested 2026-09-05 ("the loan
  *  should be separated day wise"), replacing the earlier single "who owes
- *  right now" snapshot export. Each day's sheet lists what was lent
- *  ("Given" — new credit sales) and what came back ("Received" —
- *  payments), each its own labeled block so the two never run together,
- *  then a Net row (Given − Received: how much the loan book grew or
- *  shrank that day). */
+ *  right now" snapshot export. Each day's sheet lists what came back
+ *  ("Received" — payments) and what was lent ("Given" — new credit
+ *  sales), each its own labeled block so the two never run together, then
+ *  a Net row (Given − Received: how much the loan book grew or shrank
+ *  that day). Received-then-Given order matches the on-screen cards
+ *  (LoanSection.tsx) — swapped from Given-first on request 2026-09-05. */
 export async function exportLoanXlsx(days: DayLoanReport[]): Promise<void> {
   const XLSX = await import("xlsx");
   const workbook = XLSX.utils.book_new();
 
   for (const day of days) {
     const rows: Array<Record<string, string | number>> = [];
-    rows.push({ Type: "GIVEN", Customer: "", "Amount (₹)": "" });
-    for (const line of day.given) rows.push({ Type: "", Customer: line.customerName, "Amount (₹)": line.amount });
-    rows.push({ Type: "", Customer: "Given total", "Amount (₹)": day.givenTotal });
-    rows.push({ Type: "", Customer: "", "Amount (₹)": "" });
     rows.push({ Type: "RECEIVED", Customer: "", "Amount (₹)": "" });
     for (const line of day.received) rows.push({ Type: "", Customer: line.customerName, "Amount (₹)": line.amount });
     rows.push({ Type: "", Customer: "Received total", "Amount (₹)": day.receivedTotal });
+    rows.push({ Type: "", Customer: "", "Amount (₹)": "" });
+    rows.push({ Type: "GIVEN", Customer: "", "Amount (₹)": "" });
+    for (const line of day.given) rows.push({ Type: "", Customer: line.customerName, "Amount (₹)": line.amount });
+    rows.push({ Type: "", Customer: "Given total", "Amount (₹)": day.givenTotal });
     rows.push({ Type: "", Customer: "", "Amount (₹)": "" });
     rows.push({ Type: "NET", Customer: "Given − Received", "Amount (₹)": day.netTotal });
 

@@ -205,34 +205,6 @@ export function LoanSection() {
               </div>
 
               <div className="loan-card__block">
-                <h4 className="loan-card__block-title is-given">
-                  {STRINGS.given[language]} · {formatCurrency(day.givenTotal)}
-                </h4>
-                {day.given.length === 0 ? (
-                  <p className="loan-card__none">{STRINGS.none[language]}</p>
-                ) : (
-                  <div className="day-card__table-wrap">
-                    <table className="day-card__table">
-                      <thead>
-                        <tr>
-                          <th>{STRINGS.customer[language]}</th>
-                          <th className="is-numeric">{STRINGS.amount[language]}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {day.given.map((line, i) => (
-                          <tr key={`${line.customerId}-${i}`}>
-                            <td>{line.customerName}</td>
-                            <td className="is-numeric">{formatCurrency(line.amount)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-              <div className="loan-card__block">
                 <h4 className="loan-card__block-title is-received">
                   {STRINGS.received[language]} · {formatCurrency(day.receivedTotal)}
                 </h4>
@@ -249,6 +221,34 @@ export function LoanSection() {
                       </thead>
                       <tbody>
                         {day.received.map((line, i) => (
+                          <tr key={`${line.customerId}-${i}`}>
+                            <td>{line.customerName}</td>
+                            <td className="is-numeric">{formatCurrency(line.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="loan-card__block">
+                <h4 className="loan-card__block-title is-given">
+                  {STRINGS.given[language]} · {formatCurrency(day.givenTotal)}
+                </h4>
+                {day.given.length === 0 ? (
+                  <p className="loan-card__none">{STRINGS.none[language]}</p>
+                ) : (
+                  <div className="day-card__table-wrap">
+                    <table className="day-card__table">
+                      <thead>
+                        <tr>
+                          <th>{STRINGS.customer[language]}</th>
+                          <th className="is-numeric">{STRINGS.amount[language]}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {day.given.map((line, i) => (
                           <tr key={`${line.customerId}-${i}`}>
                             <td>{line.customerName}</td>
                             <td className="is-numeric">{formatCurrency(line.amount)}</td>
